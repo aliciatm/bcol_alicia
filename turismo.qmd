@@ -1,0 +1,33 @@
+---
+title: "turismo"
+format: html
+editor: visual
+---
+
+## Packages
+
+```{r}
+
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+
+```
+
+## Apartamentos turísticos
+
+Esta base de datos del INE existen datos desde agosto del 2020 hasta agosto del 2023. Es una 'estadística experimental' donde se scrappean los datos de las tres plataformas de alojamiento turístico más utilizadas.
+
+```{r}
+turismo <- read_excel("exp_viv_turistica_tabla5_AGO2023.xlsx", sheet = 3)
+
+```
+
+Select
+
+```{r}
+turismo <- turismo |> 
+  select()
+```
+
+hacer database mas pequeña y usar eso,,??
