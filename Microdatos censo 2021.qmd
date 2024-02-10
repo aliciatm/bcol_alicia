@@ -1,0 +1,768 @@
+---
+title: "Censo 2021 microdatos"
+format: html
+editor: visual
+---
+
+## Cosas hechas
+
+-   Explorar microdatos censo 2021, selección de variables de Personas y Viviendas
+
+-   Sacar descriptivos para ver qué vemos. Quién tiene casa, gente de alquiler, herencia, hipoteca.. separar geograficamente
+
+-   Cruce sencillo de genero por régimen de vivienda, tenencia… diferencias ámbitos rural y urbano.
+
+## Cosas que hacer
+
+-   Analizar evolución entre datos censo 2011 y 2021
+-   Analizar la oferta de vivienda
+    -   Juntar database de ayuntamientos para ver cómo se concentra la propiedad, juntar database de precios.....
+
+    -   Explorar base de datos sobre vivienda turística.
+
+    -   Explorar parque público de vivienda y cómo cambia geográficamente
+
+## Preparar los datos
+
+```{r}
+library(tidyverse)
+library(ggpubr)
+library(ggplot2)
+library(patchwork)
+
+
+load("Microdatos2021/Personas/R/CensoPersonas_2021.RData")
+
+microdatos2021 <- Microdatos
+metadatos2021 <- Metadatos
+
+viviendas21 <- load("C:/Users/alici/OneDrive/Documentos/Clase/Máster/Bcol/Microdatos2021/Viviendas/R/CensoViviendas_2021.RData")
+
+viviendas21 <- Microdatos
+metadatos_vivienda21 <- Metadatos
+
+rm(Microdatos, Metadatos)
+```
+
+Selecting variables
+
+```{r}
+
+# Microdatos database
+variables <- c("CPRO", "CMUN", "NVIV", "VAREDAD", "SEXO", "PNACIO", "VARANORES", "ECIVIL", "ESREAL_CNEDA", "RELA", "SITU", "LEST", "TIPO_EDIF_VIV", "SUP_VIV", "TENEN_VIV", "SUP_OCU_VIV", "NPLANTAS_SOBRE_EDIF", "NPLANTAS_BAJO_EDIF", "ANO_CONS", "TIPOPER", "TAM_HOG", "ESTRUC_HOG", "TIPO_HOG")
+
+microdatos2021_limpio <- microdatos2021 |> 
+  select(all_of(variables))
+
+# Metadatos database
+
+Descripción <- c("Código de provincia", "Código municipio", "Identificador de vivienda/hogar", "Edad", "Sexo", "Código país de nacionalidad", "Año de llegada a la vivienda", "Estado civil", "Nivel de estudios", "Relación preferente con la actividad", "Situación profesional", "Lugar de estudio", "Tipo de edificio de vivienda", "Superficie", "Régimen de tenencia", "Superficie por ocupante", "Número de plantas sobre rasante", "Número de plantas bajo rasante", "Año de construcción", "Condición dentro del núcleo", "Tamaño del hogar", "Estructura del hogar", "Tipo de hogar")
+
+metadatos_limpio <- metadatos2021 |> 
+  filter(Variable %in% variables) |>
+  mutate(Descripción = Descripción)
+
+```
+
+## Recodificaciones
+
+```{r}
+microdatos2021_rec <- microdatos2021_limpio |> 
+   mutate(
+     HABITAT = case_when(
+       CMUN %in% c(991, 992, 993) ~ "Rural",
+       TRUE ~ "Urbano"))|> 
+   mutate(
+      ECIVIL = case_when(
+        ECIVIL == 1 ~ "Soltero",
+        ECIVIL == 2 ~ "Casado",
+        ECIVIL == 3 ~ "Viudo",
+        ECIVIL == 4 ~ "Divorciado o separado"),
+      NACIONALIDAD = case_when(
+        PNACIO == 108 ~ "Española",
+        TRUE ~ "Extranjera"),
+      RELA_R = case_when(   # Aquí cambia RELA_R == por RELA_R =
+        RELA == 1 ~ "Ocupado",
+        RELA == 2 ~ "Parado",
+        RELA %in% c(4, 5, 6, 7) ~ "Inactivo")) |> 
+  mutate(
+      ESTUDIOS = case_when(
+        ESREAL_CNEDA %in% c(01,02,03) ~ "Sin estudios",
+        ESREAL_CNEDA %in% c(04, 05, 06, 07) ~ "Estudios secundarios",
+        ESREAL_CNEDA %in% c(08, 09, 10, 11, 12) ~ "Estudios superiores"))
+
+#VIVIENDAS
+
+viviendas21 <- viviendas21 |>
+  mutate(
+ TENEN_VIV_R = case_when(
+        TENEN_VIV == 2 ~ "Propiedad",
+        TENEN_VIV == 3 ~ "Alquiler",
+        TENEN_VIV == 4 ~ "Otro",
+        TRUE ~ "No principal")) |> 
+  mutate(
+  PRINCIPAL = case_when(
+    TIPO_VIV == 0 ~ "No principal",
+    TIPO_VIV == 1 ~ "Principal")) |> 
+    mutate(SUPERF = as.numeric(SUPERF)) |> 
+  mutate(
+    SUPERF_R = case_when(
+      SUPERF <= 30 ~ "Hasta 30 m2",
+      SUPERF > 30 & SUPERF <= 45 ~ "31-45 m2",
+      SUPERF > 45 & SUPERF <= 60 ~ "46-60 m2",
+      SUPERF > 60 & SUPERF <= 75 ~ "61-75 m2",
+      SUPERF > 75 & SUPERF <= 90 ~ "76-90 m2",
+      SUPERF > 90 & SUPERF <= 105 ~ "91-105 m2",
+      SUPERF > 105 & SUPERF <= 120 ~ "106-120 m2",
+      SUPERF > 120 & SUPERF <= 150 ~ "121-150 m2",
+      SUPERF > 150 & SUPERF <= 180 ~ "151-180 m2",
+      SUPERF > 180 ~ "Más de 180 m2")) |> 
+  mutate(
+   ANOCO_R = case_when(
+    ANOCO < 1900 ~ "1900",
+    ANOCO >= 1900 & ANOCO <= 1920 ~ "1900-1920",
+    ANOCO > 1920 & ANOCO <= 1940 ~ "1921-1940",
+    ANOCO > 1940 & ANOCO <= 1950 ~ "1941-1950",
+    ANOCO > 1950 & ANOCO <= 1960 ~ "1951-1960",
+    ANOCO > 1960 & ANOCO <= 1970 ~ "1961-1970",
+    ANOCO > 1970 & ANOCO <= 1980 ~ "1971-1980",
+    ANOCO > 1980 & ANOCO <= 1990 ~ "1981-1990",
+    ANOCO > 1990 & ANOCO <= 2001 ~ "1991-2001",
+    ANOCO > 2001 & ANOCO <= 2006 ~ "2002-2006",
+    ANOCO > 2006 & ANOCO <= 2011 ~ "2007-2011",
+    ANOCO >= 2012 & ANOCO <= 2016 ~ "2012-2016",
+    ANOCO == 2017 ~ "2017",
+    ANOCO == 2018 ~ "2018",
+    ANOCO == 2019 ~ "2019",
+    ANOCO == 2020 ~ "2020",
+    ANOCO == 2021 ~ "2021"))
+```
+
+## Descriptivo de censo 2021
+
+```{r}
+# Descriptivos de variables
+a<-ggplot(microdatos2021_rec,mapping=aes(x=SITU, fill = SITU))+geom_bar(aes(y=..count../sum(..count..)))
+b<-ggplot(microdatos2021_rec,mapping=aes(x=SEXO, fill = SEXO))+geom_bar(aes(y=..count../sum(..count..)))
+c<-ggplot(microdatos2021_rec,mapping=aes(x=ECIVIL, fill = ECIVIL))+geom_bar(aes(y=..count../sum(..count..)))
+d<-ggplot(microdatos2021_rec,mapping=aes(x=ESREAL_CNEDA, fill = ESREAL_CNEDA))+geom_bar(aes(y=..count../sum(..count..)))
+
+ggarrange(a,b,c,d,
+          ncol = 2, nrow = 2)
+
+b<-ggplot(microdatos2021_rec,mapping=aes(x=SUP_VIV, fill = SUP_VIV))+geom_bar(aes(y=..count../sum(..count..)))
+c<-ggplot(microdatos2021_rec,mapping=aes(x=SUP_OCU_VIV, fill = SUP_OCU_VIV))+geom_bar(aes(y=..count../sum(..count..)))
+d<-ggplot(microdatos2021_rec,mapping=aes(x=TIPO_HOG, fill = TIPO_HOG))+geom_bar(aes(y=..count../sum(..count..)))
+
+ggarrange(a,b,c,d,
+          ncol = 2, nrow = 2)
+
+a<-ggplot(microdatos2021_rec,mapping=aes(y=VAREDAD))+geom_boxplot(fill="Orange")
+b <- ggplot(microdatos2021_rec,mapping=aes(x=HABITAT, fill = HABITAT))+geom_bar(aes(y=..count../sum(..count..)))
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+```
+
+### Cruces de variables
+
+-   Cruce régimen de vivienda x Rural, Edad, Género, Superficie vivienda
+
+    -   Régimen de tenencia x Rural. El régimen mayoritario en municipios rurales es 'Otro' (cesión). Hay más alquiler en municipios urbanos.
+
+    -   Régimen de tenencia x Edad. El alquiler tiene una edad media más baja.
+
+    -   Régimen de tenencia x Género. No se aprecia ninguna diferencia, aunque puedan existir según la edad, por ejemplo.
+
+    -   Régimen de tenencia x Superficie de vivienda. Las viviendas de alquiler tienden a ser más pequeñas; menos en el caso de las viviendas con la mayor superficie. También son las que menos se conoce la superficie (99 = no consta).
+
+```{r}
+#Régimen de tenencia x RURAL, EDAD, SEXO, Superficie vivienda
+a <- ggplot(microdatos2021_rec, aes(x = HABITAT, fill = TENEN_VIV)) +
+  geom_bar(position = "fill", color = "white") + theme_minimal()
+b <- ggplot(microdatos2021_rec,mapping=aes(x=TENEN_VIV, y=VAREDAD))+geom_boxplot(fill="lightblue")
+c <- ggplot(microdatos2021_rec, aes(x = TENEN_VIV, fill = SEXO)) +
+  geom_bar(position = "fill", color = "white") + theme_minimal()
+d <- ggplot(microdatos2021_rec, aes(x = SUP_VIV, fill = TENEN_VIV)) +
+  geom_bar(position = "fill", color = "white") + theme_minimal()
+
+ggarrange(a,b,c,d,
+          ncol = 2, nrow = 2)
+
+```
+
+-   Cruce de Rural con Superficie, Tipo de edificio, Superficie por ocupante, Nº de plantas sobre rasante, Año de construcción.
+
+    -   Rural x Superficie. Salvo las categorías de menor superficie (menos de 15m2), se observa una tendencia por la cual a mayor superficie mayor proporción de estas viviendas son rurales.
+
+    -   Rural x Superficie por ocupante. La misma tendencia, a mayor superficie por ocupante mayor proporción de viviendas en municipios rurales.
+
+    -   Rural x Tipo de edificio de vivienda. 2, 3, 4 = vivienda en edificio residencial con 1, 2, 3 viviendas o más. Son más frecuentes en municipios rurales los edificios residenciales con sólo una familia o los \*edificios no residenciales.\*
+
+    -   Rural x Nº de plantas sobre rasante. Existen menos edificios con varias plantas en las viviendas en municipios rurales.
+
+    -   Rural x Año de construcción. Hay menor proporción de viviendas más recientes en las zonas rurales.
+
+```{r}
+#Rural x Superficie, Tipo de edificio, Superficie por ocupante, Nº plantas sobre rasante, Año de construcción
+
+a <- ggplot(microdatos2021_rec, aes(x = SUP_VIV, fill = HABITAT)) +
+  geom_bar(position = "fill", color = "white") + theme_minimal()
+b <- ggplot(microdatos2021_rec, aes(x = SUP_OCU_VIV, fill = HABITAT)) +
+  geom_bar(position = "fill", color = "white") + theme_minimal()
+c <- ggplot(microdatos2021_rec, aes(x = TIPO_EDIF_VIV, fill = HABITAT)) +
+  geom_bar(position = "fill", color = "white") + theme_minimal()
+d <- ggplot(microdatos2021_rec, aes(x = NPLANTAS_SOBRE_EDIF, fill = HABITAT)) + geom_bar(position = "fill", color = "white") + theme_minimal()
+e <- ggplot(microdatos2021_rec, aes(x = ANO_CONS, fill = HABITAT)) + geom_bar(position = "fill", color = "white") + theme_minimal()
+
+
+ggarrange(a,b,c,d,e,
+          ncol = 2, nrow = 3)
+
+```
+
+## Comparación régimen de tenencia por provincias y CCAA
+
+Primero se construye y añade la columna de CCAA compuesta por los códigos de provincia.
+
+```{r}
+# Viviendas por régimen de tenencia por CCAA
+# Añadir columna ccaa
+
+library(dplyr)
+
+viviendas21 <- viviendas21 |> 
+  mutate(CPRO = as.character(CPRO))  
+
+ccaas <- data.frame(
+  CodigoProvincia = c("01", "02", "03", "04", "33", "05", "06", "08", "09", "10", "11", "39", "12", "13", "14", "16", "17", "18", "19", "20", "21", "22", "23", "07", "24", "15", "35", "25", "26", "27", "28", "29", "30", "31", "32", "34", "36", "37",
+"38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52"),
+  
+  CCAA = c("País Vasco", "Castilla-La Mancha", "Comunidad Valenciana", "Andalucía", "Asturias", "Castilla y León", "Extremadura", "Cataluña", "Castilla y León", "Extremadura", "Andalucía", "Cantabria", "Comunidad Valenciana", "Castilla-La Mancha", "Andalucía", "Castilla-La Mancha", "Cataluña", "Andalucía", "Castilla-La Mancha", "País Vasco", "Andalucía", "Aragón", "Andalucía", "Islas Baleares", "Castilla y León", "Galicia", "Canarias", "Cataluña", "La Rioja", "Galicia", "Comunidad de Madrid", "Andalucía", "Comunidad de Murcia", "Comunidad Foral de Navarra", "Galicia", "Castilla y León", "Galicia", "Castilla y León", "Canarias", "Cantabria", "Castilla y León", "Andalucía", "Castilla y León", "Cataluña", "Aragón", "Castilla-La Mancha", "Comunidad Valenciana", "Castilla y León", "País Vasco", "Castilla y León", "Aragón", "Ceuta", "Melilla"))
+
+viviendas21 <- viviendas21 |> 
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia"))
+
+microdatos2021_rec <- microdatos2021_rec |> 
+    left_join(ccaas, by = c("CPRO" = "CodigoProvincia"))
+
+```
+
+### Régimen de tenencia por CCAA y provincia
+
+-   Alquiler. Las comunidades con mayor alquiler son Melilla, Comunidad de Madrid, Cataluña y Ceuta. Se pueden encontrar posibles motivos para ellas, pero se debería explorar más posibles relaciones entre precios, ingresos de la población y régimen de tenencia:
+
+    -   Madrid y Cataluña. Incluyen grandes ciudades donde mucha gente se muda por trabajo o estudios, lo que puede fomentar el alquiler, además de los altos precios de vivienda en las grandes ciudades.
+
+    -   Melilla y Ceuta. Puede que un menor nivel de ingresos de la población de estas ciudades, que es en gran medida inmigrante, haga que haya más alquiler que propiedad (se tendría que explorar más).
+
+-   'Otro'. Viviendas de cesión, donación. Sobresalen Canarias, Ceuta, Galicia y Extremadura.
+
+-   No principal. Las comunidades con mayor proproción de viviendas no principales son Castilla y León, Castilla-La Mancha y Comunidad Valenciana. Tal vez la menor densidad de población y las llamadas zonas vaciadas dejan muchas viviendas sin ocupar como residencial principal.
+
+Con respecto a las provincias, las que tienen mayor proporción de viviendas no principales (por encima del 50% del total) son Ávila, Teruel, Soria, Zamora y Ourense. Esto encaja con ser zonas con muy baja densidad de población y que quizá tienen muchas viviendas sin residentes principales actualmente. Por otra parte, las provincias con menor proporción de viviendas no principales son Gipuzkoa, Madrid, Bizkaia, Melilla y Ceuta. Esto puede deberse al fenómeno contrario, son ciudades con una alta densidad de población que puede indicar que haya menos viviendas no ocupadas, y quizá, una menor oferta disponible de vivienda.
+
+```{r}
+# Porcentajes de regimen de tenencia por CCAA
+
+regimen_ccaa <- viviendas21 |> 
+    mutate(TENEN_VIV = as_factor(TENEN_VIV)) |> 
+    mutate(TENEN_VIV = fct_recode(TENEN_VIV,
+                                      'No principal' = " ",
+                                      "Propiedad" = "2",
+                                      "Alquiler" = "3",
+                                      "Otro" = "4")) |> 
+  group_by(CCAA, TENEN_VIV) |> 
+  summarize(n = n()) |> 
+   group_by(CCAA) |> 
+  mutate(Porcentaje = round((n / sum(n)) * 100, 2))
+
+# Gráficos Régimen de tenencia por CCAA
+
+a <- ggplot(regimen_ccaa %>% filter(TENEN_VIV == "Propiedad"),
+       aes(x = reorder(CCAA, -Porcentaje), y = Porcentaje, fill = TENEN_VIV)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Propiedad por CCAA",
+       fill = "Tipo de Régimen de Tenencia") +
+  theme_minimal() +
+  coord_flip(ylim= c(0, 75))
+
+b <-  ggplot(regimen_ccaa %>% filter(TENEN_VIV == "Alquiler"),
+       aes(x = reorder(CCAA, -Porcentaje), y = Porcentaje, fill = TENEN_VIV)) +
+  geom_bar(stat = "identity", position = "stack", fill = "#2BB143") +
+  labs(title = "Alquiler por CCAA",
+       fill = "Tipo de Régimen de Tenencia") +
+  theme_minimal() +
+  coord_flip(ylim= c(0, 75))
+
+c <-  ggplot(regimen_ccaa %>% filter(TENEN_VIV == "Otro"),
+       aes(x = reorder(CCAA, -Porcentaje), y = Porcentaje, fill = TENEN_VIV)) +
+  geom_bar(stat = "identity", position = "stack", fill = "#EEDD3A") +
+  labs(title = "'Otro' por CCAA",
+       fill = "Tipo de Régimen de Tenencia") +
+  theme_minimal() +
+  coord_flip(ylim= c(0, 75))
+
+d <-  ggplot(regimen_ccaa %>% filter(TENEN_VIV == "No principal"),
+       aes(x = reorder(CCAA, -Porcentaje), y = Porcentaje, fill = TENEN_VIV)) +
+  geom_bar(stat = "identity", position = "stack", fill = "#3A7EEE") +
+  labs(title = "No principal por CCAA",
+       fill = "Tipo de Régimen de Tenencia") +
+  theme_minimal() +
+  coord_flip(ylim= c(0, 75))
+
+(a | b) / (c | d)
+
+
+#Régimen de tenencia de las viviendas por provincia
+
+regimen_provincias <- viviendas21 |> 
+    mutate(TENEN_VIV = as_factor(TENEN_VIV)) |> 
+    mutate(TENEN_VIV = fct_recode(TENEN_VIV,
+                                      'No principal' = " ",
+                                      "Propiedad" = "2",
+                                      "Alquiler" = "3",
+                                      "Otro" = "4")) |> 
+  group_by(CPRO, TENEN_VIV) |> 
+  summarize(n = n()) |> 
+   group_by(CPRO) |> 
+  mutate(Porcentaje = round((n / sum(n)) * 100, 2))
+
+# TOP 5 provincias con más/menos vivienda no principal
+
+regimen_provincias |> 
+  filter(TENEN_VIV == "No principal") |> 
+  group_by(CPRO) |> 
+  summarize(PorcentajeNoPrincipal = max(Porcentaje)) %>%
+  arrange(desc(PorcentajeNoPrincipal)) %>%
+  head(5)
+
+regimen_provincias |> 
+  filter(TENEN_VIV == "No principal") |> 
+  group_by(CPRO) |> 
+  summarize(PorcentajeNoPrincipal = max(Porcentaje)) %>%
+  arrange(desc(PorcentajeNoPrincipal)) %>%
+  tail(5)
+```
+
+### Municipios rurales por provincia y CCAA
+
+Se considera cuántos municipios rurales existen por provincia y por CCAA para poder vislumbrar alguna relación entre la presencia de municipios rurales y otros análisis de las CCAA como el régimen de tenencia. Se observa en el gráfico que las comunidades con más municipios rurales son Extremadura, Castilla-La Mancha, Castilla y León, Navarra, Cantabria... Finalmente son comunidades con poca población. Podría precisarse la definición y características de un municipio rural o no para encontrar resultados más relevantes y que no se basen únicamente en la población.
+
+```{r}
+# Municipios rurales por provincia
+
+microdatos2021_rec |> 
+  group_by(CPRO) |> 
+  summarize(PorcentajeRural = round(mean(HABITAT == "Rural") * 100, 2)) |> 
+  print(arrange(desc(PorcentajeRural))) |> 
+  ungroup()
+
+
+# Municipios rurales por CCAA
+
+microdatos2021_rec %>%
+  group_by(CCAA) %>%
+  summarize(PorcentajeRuralCCAA = round(mean(HABITAT == "Rural") * 100, 2)) %>%
+  arrange(desc(PorcentajeRuralCCAA)) %>%
+  ggplot(aes(x = reorder(CCAA, -PorcentajeRuralCCAA), y = PorcentajeRuralCCAA)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Porcentaje de Municipios Rurales por Comunidad Autónoma",
+       x = "Comunidad Autónoma",
+       y = "Porcentaje Rural") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Correlación entre mayor proporción de municipios rurales y régimen de tenencia
+
+Aparece que existe correlación distinta a 0, pero es un valor muy bajo y cercano a 0.
+
+```{r}
+
+pop <- microdatos2021_rec |> 
+  group_by(CPRO) |> 
+  summarize(PorcentajeRural = round(mean(HABITAT == "Rural") * 100, 2)) |> 
+  print(arrange(desc(PorcentajeRural))) |> 
+  ungroup()
+
+#pop$TENEN_VIV <- as.numeric(pop$TENEN_VIV)
+
+#pop <- pop |> 
+#  left_join(viviendas21, by = "CPRO")
+
+#  cor.test(pop$PorcentajeRural, pop$TENEN_VIV, method = "pearson")
+
+```
+
+## Modelo logístico binario: rural o no
+
+En este modelo probamos predecir si un municipio es rural o no en base a la superficie de la vivienda, el número de plantas del edificio y el tipo de edificio. Tiene una True Positive Rate muy alta, acierta los casos que sí son rurales, pero su True Negative Rate es muy baja. Por lo cual, las características que se están midiendo en el modelo son indicativas de áreas rurales, pero también de otras zonas que no lo son.
+
+```{r}
+library(caret)
+library(pROC)
+
+
+#binario <- glm(RURAL ~ SUP_VIV + NPLANTAS_SOBRE_EDIF + TIPO_EDIF_VIV, data = microdatos2021_rec, family = binomial)
+
+#summary(binario)
+
+
+#curva roc
+#probabilidades <- predict(binario, type = "response")
+
+#curva_roc <- roc(microdatos2021_rec$RURAL, probabilidades)
+  
+#plot(curva_roc, main = "Curva ROC", col = "blue", lwd = 2)
+
+#matriz de confusion
+#predicciones <- ifelse(probabilidades > 0.5, TRUE, FALSE)
+
+#matriz_confusion <- confusionMatrix(factor(predicciones), factor(microdatos2021_rec$RURAL))
+
+#print(matriz_confusion)
+```
+
+# Microdatos 2011
+
+```{r}
+
+library(haven)
+
+
+microdatos2011 <- read_sav("Microdatos2011/Personas/poblacion_2011_v2.sav")
+
+viviendas11 <- read_sav("Microdatos2011/Viviendas/viviendas_2011_v1.sav")
+```
+
+### Seleccionar variables
+
+```{r}
+
+variables <- c("CPRO", "CMUN", "EDAD", "SEXO", "NACI", "ECIVIL", "ESREAL", "RELA", "SITU", "TENEN", "CALE", "ASEO", "BADUCH", "AGUACOR", "SUT", "INTERNET", "NHAB", "PLANTAS", "PLANTAB", "TIPOEDIF", "ANOCONS", "ESTADO", "ASCENSOR", "ACCESIB", "ACAL")
+
+microdatos2011_limpio <- microdatos2011 |> 
+    select(all_of(variables))
+
+variables <- c("CPRO", "CMUN", "CVIVIF", "TENEN", "CALE", "ASEO", "BADUCH", "INTERNET", "AGUACOR", "SUT", "NHAB", "PLANTAS", "PLANTAB", "TIPOEDIF", "ANOCONS", "ESTADO", "ASCENSOR", "ACCESIB", "ACAL")
+
+viviendas11 <- viviendas11 |> 
+  select(all_of(variables))
+```
+
+### Recodificaciones
+
+```{r}
+ microdatos2011_limpio <- microdatos2011_limpio |> 
+  mutate(
+    NACIONALIDAD = case_when(
+      NACI == 108 ~ "ESPAÑOLA",
+      TRUE ~ "EXTRANJERA")) |> 
+  mutate(
+   RELA_R = case_when(
+     RELA == 1 ~ "Ocupado",
+     RELA == 2 ~ "Parado",
+      RELA == 3 ~ "Parado", 
+     RELA %in% c(4, 5, 6) ~ "Inactivo")) |> 
+   mutate(
+     HABITAT = case_when(
+       CMUN %in% c(991, 992, 993, 994) ~ "Rural",
+       TRUE ~ "Urbano")) |> 
+   mutate(
+     ECIVIL = case_when(
+       ECIVIL == 1 ~ "Soltero",
+       ECIVIL == 2 ~ "Casado",
+       ECIVIL == 3 ~ "Viudo",
+       ECIVIL %in% c(4, 5) ~ "Divorciado o separado")) |> 
+   mutate(
+      ESTUDIOS = case_when(
+        ESREAL %in% c(1,2,3) ~ "Sin estudios",
+        ESREAL %in% c(4, 5, 6, 7) ~ "Estudios secundarios",
+        ESREAL %in% c(8, 9, 10, 11, 12) ~ "Estudios superiores"))
+
+#VIVIENDAS
+ 
+viviendas11 <- viviendas11 |>
+  mutate(
+ TENEN_R = case_when(
+        TENEN %in% c(1, 2, 3) ~ "Propiedad",
+        TENEN == 4 ~ "Alquiler",
+        TENEN %in% c(5,6) ~ "Otro",
+        TRUE ~ "No principal")) |> 
+     mutate(
+     HABITAT = case_when(
+       CMUN %in% c(991, 992, 993, 994) ~ "Rural",
+       TRUE ~ "Urbano")) |> 
+  mutate(
+  PRINCIPAL = case_when(
+    CVIVIF == 1 ~ "Principal",
+    CVIVIF == 2 ~ "Secundaria",
+    CVIVIF == 3 ~ "Vacía")) |> 
+  mutate(
+    SUT_R = case_when(
+      SUT <= 30 ~ "Hasta 30 m2",
+      SUT > 30 & SUT <= 45 ~ "31-45 m2",
+      SUT > 45 & SUT <= 60 ~ "46-60 m2",
+      SUT > 60 & SUT <= 75 ~ "61-75 m2",
+      SUT > 75 & SUT <= 90 ~ "76-90 m2",
+      SUT > 90 & SUT <= 105 ~ "91-105 m2",
+      SUT > 105 & SUT <= 120 ~ "106-120 m2",
+      SUT > 120 & SUT <= 150 ~ "121-150 m2",
+      SUT > 150 & SUT <= 180 ~ "151-180 m2",
+      SUT > 180 ~ "Más de 180 m2")) |> 
+  mutate(
+    ANOCONS_R = case_when(
+    ANOCONS == 2 ~ "<1900",
+    ANOCONS == 3 ~ "1900 a 1920",
+    ANOCONS == 4 ~ "1921 a 1940",
+    ANOCONS == 5 ~ "1941 a 1950",
+    ANOCONS == 6 ~ "1951 a 1960",
+    ANOCONS == 7 ~ "1961 a 1970",
+    ANOCONS == 8 ~ "1971 a 1980",
+    ANOCONS == 9 ~ "1981 a 1990",
+    ANOCONS == 10 ~ "1991 a 2001",
+    ANOCONS == 11 ~ "2002",
+    ANOCONS == 12 ~ "2003",
+    ANOCONS == 13 ~ "2004",
+    ANOCONS == 14 ~ "2005",
+    ANOCONS == 15 ~ "2006",
+    ANOCONS == 16 ~ "2007",
+    ANOCONS == 17 ~ "2008",
+    ANOCONS == 18 ~ "2009",
+    ANOCONS == 19 ~ "2010",
+    ANOCONS == 20 ~ "2011"))
+ 
+  rm(microdatos2021, microdatos2021_limpio, microdatos2011)
+ 
+```
+
+### Análisis univariable censo 2011
+
+Las variables de la población se analizan al compararlas con el censo de 2021. Sobre las viviendas:
+
+-   Estado. En su gran mayoría los edificios están en un estado 'Bueno'.
+
+-   Ascensor, accesbilidad, agua caliente central. Más o menos en la misma proporción, la mayoría de edificios cuentan con estos servicios. No se va a desarrollar mucho más estas variables pues desaparecen en el censo de 2021, que serían los datos que nos interesan más.
+
+```{r}
+
+#Edad
+a <-ggplot(microdatos2011_limpio,mapping=aes(x=EDAD, fill = EDAD))+geom_bar(aes(y=..count../sum(..count..)))
+b <-ggplot(microdatos2021_rec,mapping=aes(y=VAREDAD))+geom_boxplot(fill="Orange")
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+
+#Estado civil
+a <-ggplot(microdatos2011_limpio,mapping=aes(x=ECIVIL, fill = ECIVIL))+geom_bar(aes(y=..count../sum(..count..)))
+
+#Nacionalidad
+b <-ggplot(microdatos2011_limpio,mapping=aes(x=NACIONALIDAD, fill = NACIONALIDAD))+geom_bar(aes(y=..count../sum(..count..)))
+
+#Relación laboral
+c <-ggplot(microdatos2011_limpio,mapping=aes(x=RELA_R, fill = RELA_R))+geom_bar(aes(y=..count../sum(..count..)))
+
+#Municipios rurales
+d <- ggplot(microdatos2011_limpio,mapping=aes(x=HABITAT, fill = HABITAT))+geom_bar(aes(y=..count../sum(..count..)))
+
+ggarrange(a,b,c,d,
+          ncol = 2, nrow = 2)
+
+# VIVIENDAS
+
+#Estado
+viviendas11$ESTADO <- factor(viviendas11$ESTADO)
+a <- ggplot(viviendas11,mapping=aes(x=ESTADO, fill = ESTADO))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+
+#Ascensor
+viviendas11$ASCENSOR <- factor(viviendas11$ASCENSOR)
+b <- ggplot(viviendas11,mapping=aes(x=ASCENSOR, fill = ASCENSOR))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+
+#Accesibilidad
+viviendas11$ACCESIB <- factor(viviendas11$ACCESIB)
+c <- ggplot(viviendas11,mapping=aes(x=ACCESIB, fill = ACCESIB))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+
+#Agua caliente central
+viviendas11$ACAL <- factor(viviendas11$ACAL)
+d <- ggplot(viviendas11,mapping=aes(x=ACAL, fill = ACAL))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+
+ggarrange(a,b,c,d,
+          ncol = 2, nrow = 2)
+
+```
+
+## Comparación censo 2011- 2021
+
+Las características de la población afectarán a cuáles son las tendencias con respecto a la vivienda.
+
+-   Edad. La población está más envejecida en 2021.
+-   Estado civil. En 2021 se invierte la tendencia de 2011 y hay más solteros que casados. También aumenta ligeramente la cantidad de personas divorciadas.
+-   Nacionalidad. Ha aumentado la población extranjera.
+-   Relación laboral. Hay menos personas desempleadas en 2021.
+
+Con respecto a las características de las viviendas:
+
+-   Régimen de tenencia. En 2021 han aumentado las viviendas de alquiler en comparación con el 2011 en un 5%, en detrimento de la tenencia en propiedad. Hay menos personas propietarias de vivienda, y más que recurren al alquiler. Por otra parte, la categoría de 'otro' se mantiene estable, al igual que la cantidad de viviendas no principales.
+-   Viviendas principales. La cantidad de viviendas principales se ha mantenido igual. En 2011 había casi el doble de viviendas secundarias que vacías, pero en 2021 ya no se pueden comparar esos datos. Alrededor de un 30% de las viviendas son no principales (10% vacías, 19% secundarias).
+-   Superficie. La media de la superficie de las viviendas principales es de 90 metros cuadrados en 2021, siendo menor a la media de 2011 (101 m2). La mediana en 2021 es de 78, también menor a 2011. La superficie de las viviendas ahora es más reducida.
+-   Año de construcción.
+
+```{r}
+#PERSONAS
+
+#Edad
+a <-ggplot(microdatos2011_limpio,mapping=aes(x=EDAD))+geom_bar(aes(y=..count../sum(..count..)))
+b <- ggplot(microdatos2021_rec,mapping=aes(x=VAREDAD))+geom_bar(aes(y=..count../sum(..count..)))
+
+c <-ggplot(microdatos2011_limpio,mapping=aes(y=EDAD))+geom_boxplot(fill="blue")
+d <-ggplot(microdatos2021_rec,mapping=aes(y=VAREDAD))+geom_boxplot(fill="Orange")
+
+ggarrange(a,b,c,d,
+          ncol = 2, nrow = 2)
+
+#Estado civil
+a<-ggplot(microdatos2011_limpio,mapping=aes(x=ECIVIL, fill = ECIVIL))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+b<-ggplot(microdatos2021_rec,mapping=aes(x=ECIVIL, fill = ECIVIL))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+
+#Nacionalidad
+a <-ggplot(microdatos2011_limpio,mapping=aes(x=NACIONALIDAD, fill = NACIONALIDAD))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+b <- ggplot(microdatos2021_rec,mapping=aes(x=NACIONALIDAD, fill = NACIONALIDAD))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+
+#Relación laboral
+a <-ggplot(microdatos2011_limpio,mapping=aes(x=RELA_R, fill = RELA_R))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+b <-ggplot(microdatos2021_rec,mapping=aes(x=RELA_R, fill = RELA_R))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+
+#Nivel de estudios
+a<-ggplot(microdatos2011_limpio,mapping=aes(x=ESTUDIOS, fill = ESTUDIOS))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+b<-ggplot(microdatos2021_rec,mapping=aes(x=ESTUDIOS, fill = ESTUDIOS))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+
+#Hábitat rural o urbano
+a <- ggplot(microdatos2011_limpio,mapping=aes(x=HABITAT, fill = HABITAT))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+b <- ggplot(microdatos2021_rec,mapping=aes(x=HABITAT, fill = HABITAT))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+
+#VIVIENDAS
+
+#Régimen de tenencia
+a<-ggplot(viviendas11,mapping=aes(x=TENEN_R, fill = TENEN_R))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")+coord_cartesian(ylim = c(0, 0.6))
+b<-ggplot(viviendas21,mapping=aes(x=TENEN_VIV_R, fill = TENEN_VIV_R))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")+coord_cartesian(ylim = c(0, 0.6))
+
+(mean(viviendas21$TENEN_VIV_R== "Alquiler", na.rm = TRUE) * 100)-
+(mean(viviendas11$TENEN_R== "Alquiler", na.rm = TRUE) * 100)
+
+
+#Vivienda principal o no
+a<-ggplot(viviendas11,mapping=aes(x=PRINCIPAL, fill = PRINCIPAL))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+b<-ggplot(viviendas21,mapping=aes(x=PRINCIPAL, fill = PRINCIPAL))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")
+
+mean(viviendas11$PRINCIPAL == "Vacía") * 100
+mean(viviendas11$PRINCIPAL == "Secundaria") * 100
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+
+#Superficie
+a<-ggplot(viviendas11,mapping=aes(x=SUT_R, fill = SUT_R))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")+coord_cartesian(ylim = c(0, 0.25))
+b<-ggplot(viviendas21,mapping=aes(x=SUPERF_R, fill = SUPERF_R))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")+coord_cartesian(ylim = c(0, 0.25))
+
+mean(viviendas11$SUT)
+mean(viviendas21$SUPERF, na.rm = TRUE)
+
+median(viviendas11$SUT, na.rm = TRUE)
+median(viviendas21$SUPERF, na.rm = TRUE)
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+
+#Año de construcción
+a<-ggplot(viviendas11,mapping=aes(x=ANOCONS_R, fill = ANOCONS_R))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2011")
+b<-ggplot(viviendas21,mapping=aes(x=ANOCO_R, fill = ANOCO_R))+geom_bar(aes(y=..count../sum(..count..)))+labs(title = "2021")
+
+ggarrange(a,b,
+          ncol = 2, nrow = 1)
+```
+
+### Viviendas vacías y secundarias por CCAA
+
+```{r}
+ccaas <- data.frame(
+  CodigoProvincia = c("1", "2", "3", "4", "33", "5", "6", "8", "9", "10", "11", "39", "12", "13", "14", "16", "17", "18", "19", "20", "21", "22", "23", "7", "24", "15", "35", "25", "26", "27", "28", "29", "30", "31", "32", "34", "36", "37",
+"38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52"),
+  
+  CCAA = c("País Vasco", "Castilla-La Mancha", "Comunidad Valenciana", "Andalucía", "Asturias", "Castilla y León", "Extremadura", "Cataluña", "Castilla y León", "Extremadura", "Andalucía", "Cantabria", "Comunidad Valenciana", "Castilla-La Mancha", "Andalucía", "Castilla-La Mancha", "Cataluña", "Andalucía", "Castilla-La Mancha", "País Vasco", "Andalucía", "Aragón", "Andalucía", "Islas Baleares", "Castilla y León", "Galicia", "Canarias", "Cataluña", "La Rioja", "Galicia", "Comunidad de Madrid", "Andalucía", "Comunidad de Murcia", "Comunidad Foral de Navarra", "Galicia", "Castilla y León", "Galicia", "Castilla y León", "Canarias", "Cantabria", "Castilla y León", "Andalucía", "Castilla y León", "Cataluña", "Aragón", "Castilla-La Mancha", "Comunidad Valenciana", "Castilla y León", "País Vasco", "Castilla y León", "Aragón", "Ceuta", "Melilla"))
+
+viviendas11$CPRO <- as.character(viviendas11$CPRO)
+viviendas11 <- viviendas11 |> 
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia"))
+
+#microdatos2011_limpio <- microdatos2021_limpio |> 
+#    left_join(ccaas, by = c("CPRO" = "CodigoProvincia"))
+```
+
+-   Vacías. Las comunidades con más viviendas sin ocupar son Galicia, La Rioja y Murcia.
+
+-   Secundarias. Las comunidades con más viviendas secundarias son Castilla y León, Castilla-La Mancha y Aragón.
+
+En general, se observa que son comunidades con menor población o densidad de población. Ya se veía en los datos del censo de 2021 que las comunidades con más viviendas no principales eran estas mismas, por lo cual vemos que se sigue manteniendo esta tendencia. No podemos distinguir sin embargo cómo ha cambiado las viviendas vacías y secundarias específicamente. Parece que la gran cantidad de viviendas no principales en estas comunidades se debe más a la existencia de viviendas secundarias en lugar de vacías.
+
+```{r}
+a <- viviendas11 |> 
+  group_by(CCAA) |> 
+  summarize(PorcentajeViviendasVaciasCCAA = round(mean(PRINCIPAL == "Vacía") * 100, 2)) |> 
+  arrange(desc(PorcentajeViviendasVaciasCCAA)) |> 
+  ggplot(aes(x = reorder(CCAA, -PorcentajeViviendasVaciasCCAA), y = PorcentajeViviendasVaciasCCAA)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Porcentaje de Viviendas Vacías por Comunidad Autónoma",
+       x = "Comunidad Autónoma",
+       y = "Porcentaje de Viviendas Vacías") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+b <- viviendas11 |> 
+  group_by(CCAA) |> 
+  summarize(PorcentajeViviendasSecundariasCCAA = round(mean(PRINCIPAL == "Secundaria") * 100, 2)) |> 
+  arrange(desc(PorcentajeViviendasSecundariasCCAA)) |> 
+  ggplot(aes(x = reorder(CCAA, -PorcentajeViviendasSecundariasCCAA), y = PorcentajeViviendasSecundariasCCAA)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Porcentaje de Viviendas Secundarias por Comunidad Autónoma",
+       x = "Comunidad Autónoma",
+       y = "Porcentaje de Viviendas Secundarias") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+c <-  ggplot(regimen_ccaa %>% filter(TENEN_VIV == "No principal"),
+       aes(x = reorder(CCAA, -Porcentaje), y = Porcentaje, fill = TENEN_VIV)) +
+  geom_bar(stat = "identity", position = "stack", fill = "#3A7EEE") +
+  labs(title = "No principal por CCAA",
+       fill = "Tipo de Régimen de Tenencia") +
+  theme_minimal() +
+  coord_flip(ylim= c(0, 75))
+
+ggarrange(a,b,c,
+          ncol = 2, nrow = 2)
+```
+
+### Modelo viviendas vacías
+
+```{r}
+
+modelo <- lm(PRINCIPAL == "Vacía" ~ HABITAT, data = viviendas11)
+
+summary(modelo)
+
+```
