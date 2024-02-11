@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Censo 2021 microdatos</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Microdatos censo 2021_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Microdatos censo 2021_files/libs/quarto-html/quarto.js"></script>
+<script src="Microdatos censo 2021_files/libs/quarto-html/popper.min.js"></script>
+<script src="Microdatos censo 2021_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Microdatos censo 2021_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Microdatos censo 2021_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Microdatos censo 2021_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Microdatos censo 2021_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Microdatos censo 2021_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Microdatos censo 2021_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Censo 2021 microdatos</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="cosas-hechas" class="level2">
+<h2 class="anchored" data-anchor-id="cosas-hechas">Cosas hechas</h2>
+<ul>
+<li><p>Explorar microdatos censo 2021, selección de variables de Personas y Viviendas</p></li>
+<li><p>Sacar descriptivos para ver qué vemos. Quién tiene casa, gente de alquiler, herencia, hipoteca.. separar geograficamente</p></li>
+<li><p>Cruce sencillo de genero por régimen de vivienda, tenencia… diferencias ámbitos rural y urbano.</p></li>
+<li><p>Analizar evolución entre datos censo 2011 y 2021</p></li>
+</ul>
+</section>
+<section id="cosas-que-hacer" class="level2">
+<h2 class="anchored" data-anchor-id="cosas-que-hacer">Cosas que hacer</h2>
+<ul>
+<li>Analizar la oferta de vivienda
+<ul>
+<li><p>Juntar database de ayuntamientos para ver cómo se concentra la propiedad, juntar database de precios…..</p></li>
+<li><p>Explorar base de datos sobre vivienda turística.</p></li>
+<li><p>Explorar parque público de vivienda y cómo cambia geográficamente</p></li>
+</ul></li>
+</ul>
+</section>
+<section id="preparar-los-datos" class="level2">
+<h2 class="anchored" data-anchor-id="preparar-los-datos">Preparar los datos</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.4
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.4.4     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.0
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggpubr)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"Microdatos2021/Personas/R/CensoPersonas_2021.RData"</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>microdatos2021 <span class="ot">&lt;-</span> Microdatos</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>metadatos2021 <span class="ot">&lt;-</span> Metadatos</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>viviendas21 <span class="ot">&lt;-</span> <span class="fu">load</span>(<span class="st">"C:/Users/alici/OneDrive/Documentos/Clase/Máster/Bcol/Microdatos2021/Viviendas/R/CensoViviendas_2021.RData"</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>viviendas21 <span class="ot">&lt;-</span> Microdatos</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>metadatos_vivienda21 <span class="ot">&lt;-</span> Metadatos</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(Microdatos, Metadatos)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Selecting variables</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Microdatos database</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>variables <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CPRO"</span>, <span class="st">"CMUN"</span>, <span class="st">"NVIV"</span>, <span class="st">"VAREDAD"</span>, <span class="st">"SEXO"</span>, <span class="st">"PNACIO"</span>, <span class="st">"VARANORES"</span>, <span class="st">"ECIVIL"</span>, <span class="st">"ESREAL_CNEDA"</span>, <span class="st">"RELA"</span>, <span class="st">"SITU"</span>, <span class="st">"LEST"</span>, <span class="st">"TIPO_EDIF_VIV"</span>, <span class="st">"SUP_VIV"</span>, <span class="st">"TENEN_VIV"</span>, <span class="st">"SUP_OCU_VIV"</span>, <span class="st">"NPLANTAS_SOBRE_EDIF"</span>, <span class="st">"NPLANTAS_BAJO_EDIF"</span>, <span class="st">"ANO_CONS"</span>, <span class="st">"TIPOPER"</span>, <span class="st">"TAM_HOG"</span>, <span class="st">"ESTRUC_HOG"</span>, <span class="st">"TIPO_HOG"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>microdatos2021_limpio <span class="ot">&lt;-</span> microdatos2021 <span class="sc">|&gt;</span> </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">all_of</span>(variables))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Metadatos database</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>Descripción <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Código de provincia"</span>, <span class="st">"Código municipio"</span>, <span class="st">"Identificador de vivienda/hogar"</span>, <span class="st">"Edad"</span>, <span class="st">"Sexo"</span>, <span class="st">"Código país de nacionalidad"</span>, <span class="st">"Año de llegada a la vivienda"</span>, <span class="st">"Estado civil"</span>, <span class="st">"Nivel de estudios"</span>, <span class="st">"Relación preferente con la actividad"</span>, <span class="st">"Situación profesional"</span>, <span class="st">"Lugar de estudio"</span>, <span class="st">"Tipo de edificio de vivienda"</span>, <span class="st">"Superficie"</span>, <span class="st">"Régimen de tenencia"</span>, <span class="st">"Superficie por ocupante"</span>, <span class="st">"Número de plantas sobre rasante"</span>, <span class="st">"Número de plantas bajo rasante"</span>, <span class="st">"Año de construcción"</span>, <span class="st">"Condición dentro del núcleo"</span>, <span class="st">"Tamaño del hogar"</span>, <span class="st">"Estructura del hogar"</span>, <span class="st">"Tipo de hogar"</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>metadatos_limpio <span class="ot">&lt;-</span> metadatos2021 <span class="sc">|&gt;</span> </span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Variable <span class="sc">%in%</span> variables) <span class="sc">|&gt;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(Descripción <span class="ot">=</span> Descripción)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="recodificaciones" class="level2">
+<h2 class="anchored" data-anchor-id="recodificaciones">Recodificaciones</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>microdatos2021_rec <span class="ot">&lt;-</span> microdatos2021_limpio <span class="sc">|&gt;</span> </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">HABITAT =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>       CMUN <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">991</span>, <span class="dv">992</span>, <span class="dv">993</span>) <span class="sc">~</span> <span class="st">"Rural"</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>       <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Urbano"</span>))<span class="sc">|&gt;</span> </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">ECIVIL =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        ECIVIL <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">"Soltero"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        ECIVIL <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"Casado"</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        ECIVIL <span class="sc">==</span> <span class="dv">3</span> <span class="sc">~</span> <span class="st">"Viudo"</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        ECIVIL <span class="sc">==</span> <span class="dv">4</span> <span class="sc">~</span> <span class="st">"Divorciado o separado"</span>),</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">NACIONALIDAD =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        PNACIO <span class="sc">==</span> <span class="dv">108</span> <span class="sc">~</span> <span class="st">"Española"</span>,</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Extranjera"</span>),</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">RELA_R =</span> <span class="fu">case_when</span>(   <span class="co"># Aquí cambia RELA_R == por RELA_R =</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>        RELA <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">"Ocupado"</span>,</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        RELA <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"Parado"</span>,</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        RELA <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">7</span>) <span class="sc">~</span> <span class="st">"Inactivo"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">ESTUDIOS =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>        ESREAL_CNEDA <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">01</span>,<span class="dv">02</span>,<span class="dv">03</span>) <span class="sc">~</span> <span class="st">"Sin estudios"</span>,</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>        ESREAL_CNEDA <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">04</span>, <span class="dv">05</span>, <span class="dv">06</span>, <span class="dv">07</span>) <span class="sc">~</span> <span class="st">"Estudios secundarios"</span>,</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>        ESREAL_CNEDA <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">08</span>, <span class="dv">09</span>, <span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">12</span>) <span class="sc">~</span> <span class="st">"Estudios superiores"</span>))</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co">#VIVIENDAS</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>viviendas21 <span class="ot">&lt;-</span> viviendas21 <span class="sc">|&gt;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a> <span class="at">TENEN_VIV_R =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>        TENEN_VIV <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"Propiedad"</span>,</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>        TENEN_VIV <span class="sc">==</span> <span class="dv">3</span> <span class="sc">~</span> <span class="st">"Alquiler"</span>,</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>        TENEN_VIV <span class="sc">==</span> <span class="dv">4</span> <span class="sc">~</span> <span class="st">"Otro"</span>,</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"No principal"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">PRINCIPAL =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    TIPO_VIV <span class="sc">==</span> <span class="dv">0</span> <span class="sc">~</span> <span class="st">"No principal"</span>,</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    TIPO_VIV <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">"Principal"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">SUPERF =</span> <span class="fu">as.numeric</span>(SUPERF)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">SUPERF_R =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&lt;=</span> <span class="dv">30</span> <span class="sc">~</span> <span class="st">"Hasta 30 m2"</span>,</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">30</span> <span class="sc">&amp;</span> SUPERF <span class="sc">&lt;=</span> <span class="dv">45</span> <span class="sc">~</span> <span class="st">"31-45 m2"</span>,</span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">45</span> <span class="sc">&amp;</span> SUPERF <span class="sc">&lt;=</span> <span class="dv">60</span> <span class="sc">~</span> <span class="st">"46-60 m2"</span>,</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">60</span> <span class="sc">&amp;</span> SUPERF <span class="sc">&lt;=</span> <span class="dv">75</span> <span class="sc">~</span> <span class="st">"61-75 m2"</span>,</span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">75</span> <span class="sc">&amp;</span> SUPERF <span class="sc">&lt;=</span> <span class="dv">90</span> <span class="sc">~</span> <span class="st">"76-90 m2"</span>,</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">90</span> <span class="sc">&amp;</span> SUPERF <span class="sc">&lt;=</span> <span class="dv">105</span> <span class="sc">~</span> <span class="st">"91-105 m2"</span>,</span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">105</span> <span class="sc">&amp;</span> SUPERF <span class="sc">&lt;=</span> <span class="dv">120</span> <span class="sc">~</span> <span class="st">"106-120 m2"</span>,</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">120</span> <span class="sc">&amp;</span> SUPERF <span class="sc">&lt;=</span> <span class="dv">150</span> <span class="sc">~</span> <span class="st">"121-150 m2"</span>,</span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">150</span> <span class="sc">&amp;</span> SUPERF <span class="sc">&lt;=</span> <span class="dv">180</span> <span class="sc">~</span> <span class="st">"151-180 m2"</span>,</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>      SUPERF <span class="sc">&gt;</span> <span class="dv">180</span> <span class="sc">~</span> <span class="st">"Más de 180 m2"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>   <span class="at">ANOCO_R =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&lt;</span> <span class="dv">1900</span> <span class="sc">~</span> <span class="st">"1900"</span>,</span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;=</span> <span class="dv">1900</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">1920</span> <span class="sc">~</span> <span class="st">"1900-1920"</span>,</span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">1920</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">1940</span> <span class="sc">~</span> <span class="st">"1921-1940"</span>,</span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">1940</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">1950</span> <span class="sc">~</span> <span class="st">"1941-1950"</span>,</span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">1950</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">1960</span> <span class="sc">~</span> <span class="st">"1951-1960"</span>,</span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">1960</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">1970</span> <span class="sc">~</span> <span class="st">"1961-1970"</span>,</span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">1970</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">1980</span> <span class="sc">~</span> <span class="st">"1971-1980"</span>,</span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">1980</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">1990</span> <span class="sc">~</span> <span class="st">"1981-1990"</span>,</span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">1990</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">2001</span> <span class="sc">~</span> <span class="st">"1991-2001"</span>,</span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">2001</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">2006</span> <span class="sc">~</span> <span class="st">"2002-2006"</span>,</span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;</span> <span class="dv">2006</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">2011</span> <span class="sc">~</span> <span class="st">"2007-2011"</span>,</span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">&gt;=</span> <span class="dv">2012</span> <span class="sc">&amp;</span> ANOCO <span class="sc">&lt;=</span> <span class="dv">2016</span> <span class="sc">~</span> <span class="st">"2012-2016"</span>,</span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">==</span> <span class="dv">2017</span> <span class="sc">~</span> <span class="st">"2017"</span>,</span>
+<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">==</span> <span class="dv">2018</span> <span class="sc">~</span> <span class="st">"2018"</span>,</span>
+<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">==</span> <span class="dv">2019</span> <span class="sc">~</span> <span class="st">"2019"</span>,</span>
+<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">==</span> <span class="dv">2020</span> <span class="sc">~</span> <span class="st">"2020"</span>,</span>
+<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a>    ANOCO <span class="sc">==</span> <span class="dv">2021</span> <span class="sc">~</span> <span class="st">"2021"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="descriptivo-de-censo-2021" class="level2">
+<h2 class="anchored" data-anchor-id="descriptivo-de-censo-2021">Descriptivo de censo 2021</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Descriptivos de variables</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>a<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>SITU, <span class="at">fill =</span> SITU))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>b<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>SEXO, <span class="at">fill =</span> SEXO))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>c<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ECIVIL, <span class="at">fill =</span> ECIVIL))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>d<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ESREAL_CNEDA, <span class="at">fill =</span> ESREAL_CNEDA))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,c,d,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The dot-dot notation (`..count..`) was deprecated in ggplot2 3.4.0.
+ℹ Please use `after_stat(count)` instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>b<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>SUP_VIV, <span class="at">fill =</span> SUP_VIV))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>c<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>SUP_OCU_VIV, <span class="at">fill =</span> SUP_OCU_VIV))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>d<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>TIPO_HOG, <span class="at">fill =</span> TIPO_HOG))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(b,c,d,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-4-2.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>a<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">y=</span>VAREDAD))<span class="sc">+</span><span class="fu">geom_boxplot</span>(<span class="at">fill=</span><span class="st">"Orange"</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>HABITAT, <span class="at">fill =</span> HABITAT))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-4-3.png" class="img-fluid" width="1152"></p>
+</div>
+</div>
+<section id="cruces-de-variables" class="level3">
+<h3 class="anchored" data-anchor-id="cruces-de-variables">Cruces de variables</h3>
+<ul>
+<li><p>Cruce régimen de vivienda x Rural, Edad, Género, Superficie vivienda</p>
+<ul>
+<li><p>Régimen de tenencia x Rural. El régimen mayoritario en municipios rurales es ‘Otro’ (cesión). Hay más alquiler en municipios urbanos.</p></li>
+<li><p>Régimen de tenencia x Edad. El alquiler tiene una edad media más baja.</p></li>
+<li><p>Régimen de tenencia x Género. No se aprecia ninguna diferencia, aunque puedan existir según la edad, por ejemplo.</p></li>
+<li><p>Régimen de tenencia x Superficie de vivienda. Las viviendas de alquiler tienden a ser más pequeñas; menos en el caso de las viviendas con la mayor superficie. También son las que menos se conoce la superficie (99 = no consta).</p></li>
+</ul></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Régimen de tenencia x RURAL, EDAD, SEXO, Superficie vivienda</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec, <span class="fu">aes</span>(<span class="at">x =</span> HABITAT, <span class="at">fill =</span> TENEN_VIV)) <span class="sc">+</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>TENEN_VIV, <span class="at">y=</span>VAREDAD))<span class="sc">+</span><span class="fu">geom_boxplot</span>(<span class="at">fill=</span><span class="st">"lightblue"</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec, <span class="fu">aes</span>(<span class="at">x =</span> TENEN_VIV, <span class="at">fill =</span> SEXO)) <span class="sc">+</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec, <span class="fu">aes</span>(<span class="at">x =</span> SUP_VIV, <span class="at">fill =</span> TENEN_VIV)) <span class="sc">+</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,c,d,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="1152"></p>
+</div>
+</div>
+<ul>
+<li><p>Cruce de Rural con Superficie, Tipo de edificio, Superficie por ocupante, Nº de plantas sobre rasante, Año de construcción.</p>
+<ul>
+<li><p>Rural x Superficie. Salvo las categorías de menor superficie (menos de 15m2), se observa una tendencia por la cual a mayor superficie mayor proporción de estas viviendas son rurales.</p></li>
+<li><p>Rural x Superficie por ocupante. La misma tendencia, a mayor superficie por ocupante mayor proporción de viviendas en municipios rurales.</p></li>
+<li><p>Rural x Tipo de edificio de vivienda. 2, 3, 4 = vivienda en edificio residencial con 1, 2, 3 viviendas o más. Son más frecuentes en municipios rurales los edificios residenciales con sólo una familia o los *edificios no residenciales.*</p></li>
+<li><p>Rural x Nº de plantas sobre rasante. Existen menos edificios con varias plantas en las viviendas en municipios rurales.</p></li>
+<li><p>Rural x Año de construcción. Hay menor proporción de viviendas más recientes en las zonas rurales.</p></li>
+</ul></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Rural x Superficie, Tipo de edificio, Superficie por ocupante, Nº plantas sobre rasante, Año de construcción</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec, <span class="fu">aes</span>(<span class="at">x =</span> SUP_VIV, <span class="at">fill =</span> HABITAT)) <span class="sc">+</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec, <span class="fu">aes</span>(<span class="at">x =</span> SUP_OCU_VIV, <span class="at">fill =</span> HABITAT)) <span class="sc">+</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec, <span class="fu">aes</span>(<span class="at">x =</span> TIPO_EDIF_VIV, <span class="at">fill =</span> HABITAT)) <span class="sc">+</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec, <span class="fu">aes</span>(<span class="at">x =</span> NPLANTAS_SOBRE_EDIF, <span class="at">fill =</span> HABITAT)) <span class="sc">+</span> <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>e <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec, <span class="fu">aes</span>(<span class="at">x =</span> ANO_CONS, <span class="at">fill =</span> HABITAT)) <span class="sc">+</span> <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,c,d,e,</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="1152"></p>
+</div>
+</div>
+</section>
+</section>
+<section id="comparación-régimen-de-tenencia-por-provincias-y-ccaa" class="level2">
+<h2 class="anchored" data-anchor-id="comparación-régimen-de-tenencia-por-provincias-y-ccaa">Comparación régimen de tenencia por provincias y CCAA</h2>
+<p>Primero se construye y añade la columna de CCAA compuesta por los códigos de provincia.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Viviendas por régimen de tenencia por CCAA</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Añadir columna ccaa</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>viviendas21 <span class="ot">&lt;-</span> viviendas21 <span class="sc">|&gt;</span> </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">CPRO =</span> <span class="fu">as.character</span>(CPRO))  </span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>ccaas <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">CodigoProvincia =</span> <span class="fu">c</span>(<span class="st">"01"</span>, <span class="st">"02"</span>, <span class="st">"03"</span>, <span class="st">"04"</span>, <span class="st">"33"</span>, <span class="st">"05"</span>, <span class="st">"06"</span>, <span class="st">"08"</span>, <span class="st">"09"</span>, <span class="st">"10"</span>, <span class="st">"11"</span>, <span class="st">"39"</span>, <span class="st">"12"</span>, <span class="st">"13"</span>, <span class="st">"14"</span>, <span class="st">"16"</span>, <span class="st">"17"</span>, <span class="st">"18"</span>, <span class="st">"19"</span>, <span class="st">"20"</span>, <span class="st">"21"</span>, <span class="st">"22"</span>, <span class="st">"23"</span>, <span class="st">"07"</span>, <span class="st">"24"</span>, <span class="st">"15"</span>, <span class="st">"35"</span>, <span class="st">"25"</span>, <span class="st">"26"</span>, <span class="st">"27"</span>, <span class="st">"28"</span>, <span class="st">"29"</span>, <span class="st">"30"</span>, <span class="st">"31"</span>, <span class="st">"32"</span>, <span class="st">"34"</span>, <span class="st">"36"</span>, <span class="st">"37"</span>,</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="st">"38"</span>, <span class="st">"39"</span>, <span class="st">"40"</span>, <span class="st">"41"</span>, <span class="st">"42"</span>, <span class="st">"43"</span>, <span class="st">"44"</span>, <span class="st">"45"</span>, <span class="st">"46"</span>, <span class="st">"47"</span>, <span class="st">"48"</span>, <span class="st">"49"</span>, <span class="st">"50"</span>, <span class="st">"51"</span>, <span class="st">"52"</span>),</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">CCAA =</span> <span class="fu">c</span>(<span class="st">"País Vasco"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"Comunidad Valenciana"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Asturias"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Extremadura"</span>, <span class="st">"Cataluña"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Extremadura"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Cantabria"</span>, <span class="st">"Comunidad Valenciana"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"Cataluña"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"País Vasco"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Aragón"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Islas Baleares"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Galicia"</span>, <span class="st">"Canarias"</span>, <span class="st">"Cataluña"</span>, <span class="st">"La Rioja"</span>, <span class="st">"Galicia"</span>, <span class="st">"Comunidad de Madrid"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Comunidad de Murcia"</span>, <span class="st">"Comunidad Foral de Navarra"</span>, <span class="st">"Galicia"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Galicia"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Canarias"</span>, <span class="st">"Cantabria"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Cataluña"</span>, <span class="st">"Aragón"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"Comunidad Valenciana"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"País Vasco"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Aragón"</span>, <span class="st">"Ceuta"</span>, <span class="st">"Melilla"</span>))</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>viviendas21 <span class="ot">&lt;-</span> viviendas21 <span class="sc">|&gt;</span> </span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(ccaas, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"CPRO"</span> <span class="ot">=</span> <span class="st">"CodigoProvincia"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in left_join(viviendas21, ccaas, by = c(CPRO = "CodigoProvincia")): Detected an unexpected many-to-many relationship between `x` and `y`.
+ℹ Row 69 of `x` matches multiple rows in `y`.
+ℹ Row 28 of `y` matches multiple rows in `x`.
+ℹ If a many-to-many relationship is expected, set `relationship =
+  "many-to-many"` to silence this warning.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>microdatos2021_rec <span class="ot">&lt;-</span> microdatos2021_rec <span class="sc">|&gt;</span> </span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(ccaas, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"CPRO"</span> <span class="ot">=</span> <span class="st">"CodigoProvincia"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in left_join(microdatos2021_rec, ccaas, by = c(CPRO = "CodigoProvincia")): Detected an unexpected many-to-many relationship between `x` and `y`.
+ℹ Row 143 of `x` matches multiple rows in `y`.
+ℹ Row 49 of `y` matches multiple rows in `x`.
+ℹ If a many-to-many relationship is expected, set `relationship =
+  "many-to-many"` to silence this warning.</code></pre>
+</div>
+</div>
+<section id="régimen-de-tenencia-por-ccaa-y-provincia" class="level3">
+<h3 class="anchored" data-anchor-id="régimen-de-tenencia-por-ccaa-y-provincia">Régimen de tenencia por CCAA y provincia</h3>
+<ul>
+<li><p>Alquiler. Las comunidades con mayor alquiler son Melilla, Comunidad de Madrid, Cataluña y Ceuta. Se pueden encontrar posibles motivos para ellas, pero se debería explorar más posibles relaciones entre precios, ingresos de la población y régimen de tenencia:</p>
+<ul>
+<li><p>Madrid y Cataluña. Incluyen grandes ciudades donde mucha gente se muda por trabajo o estudios, lo que puede fomentar el alquiler, además de los altos precios de vivienda en las grandes ciudades.</p></li>
+<li><p>Melilla y Ceuta. Puede que un menor nivel de ingresos de la población de estas ciudades, que es en gran medida inmigrante, haga que haya más alquiler que propiedad (se tendría que explorar más).</p></li>
+</ul></li>
+<li><p>‘Otro’. Viviendas de cesión, donación. Sobresalen Canarias, Ceuta, Galicia y Extremadura.</p></li>
+<li><p>No principal. Las comunidades con mayor proproción de viviendas no principales son Castilla y León, Castilla-La Mancha y Comunidad Valenciana. Tal vez la menor densidad de población y las llamadas zonas vaciadas dejan muchas viviendas sin ocupar como residencial principal.</p></li>
+</ul>
+<p>Con respecto a las provincias, las que tienen mayor proporción de viviendas no principales (por encima del 50% del total) son Ávila, Teruel, Soria, Zamora y Ourense. Esto encaja con ser zonas con muy baja densidad de población y que quizá tienen muchas viviendas sin residentes principales actualmente. Por otra parte, las provincias con menor proporción de viviendas no principales son Gipuzkoa, Madrid, Bizkaia, Melilla y Ceuta. Esto puede deberse al fenómeno contrario, son ciudades con una alta densidad de población que puede indicar que haya menos viviendas no ocupadas, y quizá, una menor oferta disponible de vivienda.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Porcentajes de regimen de tenencia por CCAA</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>regimen_ccaa <span class="ot">&lt;-</span> viviendas21 <span class="sc">|&gt;</span> </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">TENEN_VIV =</span> <span class="fu">as_factor</span>(TENEN_VIV)) <span class="sc">|&gt;</span> </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">TENEN_VIV =</span> <span class="fu">fct_recode</span>(TENEN_VIV,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>                                      <span class="st">'No principal'</span> <span class="ot">=</span> <span class="st">" "</span>,</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>                                      <span class="st">"Propiedad"</span> <span class="ot">=</span> <span class="st">"2"</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>                                      <span class="st">"Alquiler"</span> <span class="ot">=</span> <span class="st">"3"</span>,</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>                                      <span class="st">"Otro"</span> <span class="ot">=</span> <span class="st">"4"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CCAA, TENEN_VIV) <span class="sc">|&gt;</span> </span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">n =</span> <span class="fu">n</span>()) <span class="sc">|&gt;</span> </span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>   <span class="fu">group_by</span>(CCAA) <span class="sc">|&gt;</span> </span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Porcentaje =</span> <span class="fu">round</span>((n <span class="sc">/</span> <span class="fu">sum</span>(n)) <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'CCAA'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Gráficos Régimen de tenencia por CCAA</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(regimen_ccaa <span class="sc">%&gt;%</span> <span class="fu">filter</span>(TENEN_VIV <span class="sc">==</span> <span class="st">"Propiedad"</span>),</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(CCAA, <span class="sc">-</span>Porcentaje), <span class="at">y =</span> Porcentaje, <span class="at">fill =</span> TENEN_VIV)) <span class="sc">+</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">position =</span> <span class="st">"stack"</span>) <span class="sc">+</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Propiedad por CCAA"</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">"Tipo de Régimen de Tenencia"</span>) <span class="sc">+</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>(<span class="at">ylim=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">75</span>))</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span>  <span class="fu">ggplot</span>(regimen_ccaa <span class="sc">%&gt;%</span> <span class="fu">filter</span>(TENEN_VIV <span class="sc">==</span> <span class="st">"Alquiler"</span>),</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(CCAA, <span class="sc">-</span>Porcentaje), <span class="at">y =</span> Porcentaje, <span class="at">fill =</span> TENEN_VIV)) <span class="sc">+</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">position =</span> <span class="st">"stack"</span>, <span class="at">fill =</span> <span class="st">"#2BB143"</span>) <span class="sc">+</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Alquiler por CCAA"</span>,</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">"Tipo de Régimen de Tenencia"</span>) <span class="sc">+</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>(<span class="at">ylim=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">75</span>))</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span>  <span class="fu">ggplot</span>(regimen_ccaa <span class="sc">%&gt;%</span> <span class="fu">filter</span>(TENEN_VIV <span class="sc">==</span> <span class="st">"Otro"</span>),</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(CCAA, <span class="sc">-</span>Porcentaje), <span class="at">y =</span> Porcentaje, <span class="at">fill =</span> TENEN_VIV)) <span class="sc">+</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">position =</span> <span class="st">"stack"</span>, <span class="at">fill =</span> <span class="st">"#EEDD3A"</span>) <span class="sc">+</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"'Otro' por CCAA"</span>,</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">"Tipo de Régimen de Tenencia"</span>) <span class="sc">+</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>(<span class="at">ylim=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">75</span>))</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span>  <span class="fu">ggplot</span>(regimen_ccaa <span class="sc">%&gt;%</span> <span class="fu">filter</span>(TENEN_VIV <span class="sc">==</span> <span class="st">"No principal"</span>),</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(CCAA, <span class="sc">-</span>Porcentaje), <span class="at">y =</span> Porcentaje, <span class="at">fill =</span> TENEN_VIV)) <span class="sc">+</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">position =</span> <span class="st">"stack"</span>, <span class="at">fill =</span> <span class="st">"#3A7EEE"</span>) <span class="sc">+</span></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"No principal por CCAA"</span>,</span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">"Tipo de Régimen de Tenencia"</span>) <span class="sc">+</span></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>(<span class="at">ylim=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">75</span>))</span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>(a <span class="sc">|</span> b) <span class="sc">/</span> (c <span class="sc">|</span> d)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Régimen de tenencia de las viviendas por provincia</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>regimen_provincias <span class="ot">&lt;-</span> viviendas21 <span class="sc">|&gt;</span> </span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">TENEN_VIV =</span> <span class="fu">as_factor</span>(TENEN_VIV)) <span class="sc">|&gt;</span> </span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">TENEN_VIV =</span> <span class="fu">fct_recode</span>(TENEN_VIV,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>                                      <span class="st">'No principal'</span> <span class="ot">=</span> <span class="st">" "</span>,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>                                      <span class="st">"Propiedad"</span> <span class="ot">=</span> <span class="st">"2"</span>,</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>                                      <span class="st">"Alquiler"</span> <span class="ot">=</span> <span class="st">"3"</span>,</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>                                      <span class="st">"Otro"</span> <span class="ot">=</span> <span class="st">"4"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CPRO, TENEN_VIV) <span class="sc">|&gt;</span> </span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">n =</span> <span class="fu">n</span>()) <span class="sc">|&gt;</span> </span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>   <span class="fu">group_by</span>(CPRO) <span class="sc">|&gt;</span> </span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Porcentaje =</span> <span class="fu">round</span>((n <span class="sc">/</span> <span class="fu">sum</span>(n)) <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'CPRO'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># TOP 5 provincias con más/menos vivienda no principal</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>regimen_provincias <span class="sc">|&gt;</span> </span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(TENEN_VIV <span class="sc">==</span> <span class="st">"No principal"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CPRO) <span class="sc">|&gt;</span> </span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">PorcentajeNoPrincipal =</span> <span class="fu">max</span>(Porcentaje)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(PorcentajeNoPrincipal)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 2
+  CPRO  PorcentajeNoPrincipal
+  &lt;chr&gt;                 &lt;dbl&gt;
+1 05                     59.4
+2 44                     57.2
+3 42                     54.6
+4 49                     51.0
+5 32                     51.0</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>regimen_provincias <span class="sc">|&gt;</span> </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(TENEN_VIV <span class="sc">==</span> <span class="st">"No principal"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CPRO) <span class="sc">|&gt;</span> </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">PorcentajeNoPrincipal =</span> <span class="fu">max</span>(Porcentaje)) <span class="sc">%&gt;%</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(PorcentajeNoPrincipal)) <span class="sc">%&gt;%</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tail</span>(<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 2
+  CPRO  PorcentajeNoPrincipal
+  &lt;chr&gt;                 &lt;dbl&gt;
+1 20                    14.6 
+2 28                    13.8 
+3 48                    13.7 
+4 52                    13.7 
+5 51                     9.52</code></pre>
+</div>
+</div>
+</section>
+<section id="municipios-rurales-por-provincia-y-ccaa" class="level3">
+<h3 class="anchored" data-anchor-id="municipios-rurales-por-provincia-y-ccaa">Municipios rurales por provincia y CCAA</h3>
+<p>Se considera cuántos municipios rurales existen por provincia y por CCAA para poder vislumbrar alguna relación entre la presencia de municipios rurales y otros análisis de las CCAA como el régimen de tenencia. Se observa en el gráfico que las comunidades con más municipios rurales son Extremadura, Castilla-La Mancha, Castilla y León, Navarra, Cantabria… Finalmente son comunidades con poca población. Podría precisarse la definición y características de un municipio rural o no para encontrar resultados más relevantes y que no se basen únicamente en la población.</p>
+</section>
+<section id="correlación-entre-mayor-proporción-de-municipios-rurales-y-régimen-de-tenencia" class="level3">
+<h3 class="anchored" data-anchor-id="correlación-entre-mayor-proporción-de-municipios-rurales-y-régimen-de-tenencia">Correlación entre mayor proporción de municipios rurales y régimen de tenencia</h3>
+<p>Aparece que existe correlación distinta a 0, pero es un valor muy bajo y cercano a 0.</p>
+</section>
+</section>
+<section id="modelo-logístico-binario-rural-o-no" class="level2">
+<h2 class="anchored" data-anchor-id="modelo-logístico-binario-rural-o-no">Modelo logístico binario: rural o no</h2>
+<p>En este modelo probamos predecir si un municipio es rural o no en base a la superficie de la vivienda, el número de plantas del edificio y el tipo de edificio. Tiene una True Positive Rate muy alta, acierta los casos que sí son rurales, pero su True Negative Rate es muy baja. Por lo cual, las características que se están midiendo en el modelo son indicativas de áreas rurales, pero también de otras zonas que no lo son.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: lattice</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'caret'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:purrr':
+
+    lift</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pROC)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Type 'citation("pROC")' for a citation.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'pROC'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    cov, smooth, var</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co">#binario &lt;- glm(RURAL ~ SUP_VIV + NPLANTAS_SOBRE_EDIF + TIPO_EDIF_VIV, data = microdatos2021_rec, family = binomial)</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="co">#summary(binario)</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="co">#curva roc</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a><span class="co">#probabilidades &lt;- predict(binario, type = "response")</span></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a><span class="co">#curva_roc &lt;- roc(microdatos2021_rec$RURAL, probabilidades)</span></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a><span class="co">#plot(curva_roc, main = "Curva ROC", col = "blue", lwd = 2)</span></span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a><span class="co">#matriz de confusion</span></span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a><span class="co">#predicciones &lt;- ifelse(probabilidades &gt; 0.5, TRUE, FALSE)</span></span>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a><span class="co">#matriz_confusion &lt;- confusionMatrix(factor(predicciones), factor(microdatos2021_rec$RURAL))</span></span>
+<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-18"><a href="#cb33-18" aria-hidden="true" tabindex="-1"></a><span class="co">#print(matriz_confusion)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="microdatos-2011" class="level1">
+<h1>Microdatos 2011</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(haven)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>microdatos2011 <span class="ot">&lt;-</span> <span class="fu">read_sav</span>(<span class="st">"Microdatos2011/Personas/poblacion_2011_v2.sav"</span>)</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>viviendas11 <span class="ot">&lt;-</span> <span class="fu">read_sav</span>(<span class="st">"Microdatos2011/Viviendas/viviendas_2011_v1.sav"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="seleccionar-variables" class="level3">
+<h3 class="anchored" data-anchor-id="seleccionar-variables">Seleccionar variables</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>variables <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CPRO"</span>, <span class="st">"CMUN"</span>, <span class="st">"EDAD"</span>, <span class="st">"SEXO"</span>, <span class="st">"NACI"</span>, <span class="st">"ECIVIL"</span>, <span class="st">"ESREAL"</span>, <span class="st">"RELA"</span>, <span class="st">"SITU"</span>, <span class="st">"TENEN"</span>, <span class="st">"CALE"</span>, <span class="st">"ASEO"</span>, <span class="st">"BADUCH"</span>, <span class="st">"AGUACOR"</span>, <span class="st">"SUT"</span>, <span class="st">"INTERNET"</span>, <span class="st">"NHAB"</span>, <span class="st">"PLANTAS"</span>, <span class="st">"PLANTAB"</span>, <span class="st">"TIPOEDIF"</span>, <span class="st">"ANOCONS"</span>, <span class="st">"ESTADO"</span>, <span class="st">"ASCENSOR"</span>, <span class="st">"ACCESIB"</span>, <span class="st">"ACAL"</span>)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>microdatos2011_limpio <span class="ot">&lt;-</span> microdatos2011 <span class="sc">|&gt;</span> </span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="fu">all_of</span>(variables))</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>variables <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CPRO"</span>, <span class="st">"CMUN"</span>, <span class="st">"CVIVIF"</span>, <span class="st">"TENEN"</span>, <span class="st">"CALE"</span>, <span class="st">"ASEO"</span>, <span class="st">"BADUCH"</span>, <span class="st">"INTERNET"</span>, <span class="st">"AGUACOR"</span>, <span class="st">"SUT"</span>, <span class="st">"NHAB"</span>, <span class="st">"PLANTAS"</span>, <span class="st">"PLANTAB"</span>, <span class="st">"TIPOEDIF"</span>, <span class="st">"ANOCONS"</span>, <span class="st">"ESTADO"</span>, <span class="st">"ASCENSOR"</span>, <span class="st">"ACCESIB"</span>, <span class="st">"ACAL"</span>)</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>viviendas11 <span class="ot">&lt;-</span> viviendas11 <span class="sc">|&gt;</span> </span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">all_of</span>(variables))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="recodificaciones-1" class="level3">
+<h3 class="anchored" data-anchor-id="recodificaciones-1">Recodificaciones</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a> microdatos2011_limpio <span class="ot">&lt;-</span> microdatos2011_limpio <span class="sc">|&gt;</span> </span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">NACIONALIDAD =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>      NACI <span class="sc">==</span> <span class="dv">108</span> <span class="sc">~</span> <span class="st">"ESPAÑOLA"</span>,</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"EXTRANJERA"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>   <span class="at">RELA_R =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>     RELA <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">"Ocupado"</span>,</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>     RELA <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"Parado"</span>,</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>      RELA <span class="sc">==</span> <span class="dv">3</span> <span class="sc">~</span> <span class="st">"Parado"</span>, </span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>     RELA <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>) <span class="sc">~</span> <span class="st">"Inactivo"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(</span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>     <span class="at">HABITAT =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>       CMUN <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">991</span>, <span class="dv">992</span>, <span class="dv">993</span>, <span class="dv">994</span>) <span class="sc">~</span> <span class="st">"Rural"</span>,</span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>       <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Urbano"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(</span>
+<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>     <span class="at">ECIVIL =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a>       ECIVIL <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">"Soltero"</span>,</span>
+<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a>       ECIVIL <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"Casado"</span>,</span>
+<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a>       ECIVIL <span class="sc">==</span> <span class="dv">3</span> <span class="sc">~</span> <span class="st">"Viudo"</span>,</span>
+<span id="cb36-21"><a href="#cb36-21" aria-hidden="true" tabindex="-1"></a>       ECIVIL <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">5</span>) <span class="sc">~</span> <span class="st">"Divorciado o separado"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb36-22"><a href="#cb36-22" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(</span>
+<span id="cb36-23"><a href="#cb36-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">ESTUDIOS =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-24"><a href="#cb36-24" aria-hidden="true" tabindex="-1"></a>        ESREAL <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>) <span class="sc">~</span> <span class="st">"Sin estudios"</span>,</span>
+<span id="cb36-25"><a href="#cb36-25" aria-hidden="true" tabindex="-1"></a>        ESREAL <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">7</span>) <span class="sc">~</span> <span class="st">"Estudios secundarios"</span>,</span>
+<span id="cb36-26"><a href="#cb36-26" aria-hidden="true" tabindex="-1"></a>        ESREAL <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">8</span>, <span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">12</span>) <span class="sc">~</span> <span class="st">"Estudios superiores"</span>))</span>
+<span id="cb36-27"><a href="#cb36-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-28"><a href="#cb36-28" aria-hidden="true" tabindex="-1"></a><span class="co">#VIVIENDAS</span></span>
+<span id="cb36-29"><a href="#cb36-29" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb36-30"><a href="#cb36-30" aria-hidden="true" tabindex="-1"></a>viviendas11 <span class="ot">&lt;-</span> viviendas11 <span class="sc">|&gt;</span></span>
+<span id="cb36-31"><a href="#cb36-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb36-32"><a href="#cb36-32" aria-hidden="true" tabindex="-1"></a> <span class="at">TENEN_R =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-33"><a href="#cb36-33" aria-hidden="true" tabindex="-1"></a>        TENEN <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>) <span class="sc">~</span> <span class="st">"Propiedad"</span>,</span>
+<span id="cb36-34"><a href="#cb36-34" aria-hidden="true" tabindex="-1"></a>        TENEN <span class="sc">==</span> <span class="dv">4</span> <span class="sc">~</span> <span class="st">"Alquiler"</span>,</span>
+<span id="cb36-35"><a href="#cb36-35" aria-hidden="true" tabindex="-1"></a>        TENEN <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">5</span>,<span class="dv">6</span>) <span class="sc">~</span> <span class="st">"Otro"</span>,</span>
+<span id="cb36-36"><a href="#cb36-36" aria-hidden="true" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"No principal"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb36-37"><a href="#cb36-37" aria-hidden="true" tabindex="-1"></a>     <span class="fu">mutate</span>(</span>
+<span id="cb36-38"><a href="#cb36-38" aria-hidden="true" tabindex="-1"></a>     <span class="at">HABITAT =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-39"><a href="#cb36-39" aria-hidden="true" tabindex="-1"></a>       CMUN <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">991</span>, <span class="dv">992</span>, <span class="dv">993</span>, <span class="dv">994</span>) <span class="sc">~</span> <span class="st">"Rural"</span>,</span>
+<span id="cb36-40"><a href="#cb36-40" aria-hidden="true" tabindex="-1"></a>       <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Urbano"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb36-41"><a href="#cb36-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb36-42"><a href="#cb36-42" aria-hidden="true" tabindex="-1"></a>  <span class="at">PRINCIPAL =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-43"><a href="#cb36-43" aria-hidden="true" tabindex="-1"></a>    CVIVIF <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">"Principal"</span>,</span>
+<span id="cb36-44"><a href="#cb36-44" aria-hidden="true" tabindex="-1"></a>    CVIVIF <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"Secundaria"</span>,</span>
+<span id="cb36-45"><a href="#cb36-45" aria-hidden="true" tabindex="-1"></a>    CVIVIF <span class="sc">==</span> <span class="dv">3</span> <span class="sc">~</span> <span class="st">"Vacía"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb36-46"><a href="#cb36-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb36-47"><a href="#cb36-47" aria-hidden="true" tabindex="-1"></a>    <span class="at">SUT_R =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-48"><a href="#cb36-48" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&lt;=</span> <span class="dv">30</span> <span class="sc">~</span> <span class="st">"Hasta 30 m2"</span>,</span>
+<span id="cb36-49"><a href="#cb36-49" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">30</span> <span class="sc">&amp;</span> SUT <span class="sc">&lt;=</span> <span class="dv">45</span> <span class="sc">~</span> <span class="st">"31-45 m2"</span>,</span>
+<span id="cb36-50"><a href="#cb36-50" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">45</span> <span class="sc">&amp;</span> SUT <span class="sc">&lt;=</span> <span class="dv">60</span> <span class="sc">~</span> <span class="st">"46-60 m2"</span>,</span>
+<span id="cb36-51"><a href="#cb36-51" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">60</span> <span class="sc">&amp;</span> SUT <span class="sc">&lt;=</span> <span class="dv">75</span> <span class="sc">~</span> <span class="st">"61-75 m2"</span>,</span>
+<span id="cb36-52"><a href="#cb36-52" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">75</span> <span class="sc">&amp;</span> SUT <span class="sc">&lt;=</span> <span class="dv">90</span> <span class="sc">~</span> <span class="st">"76-90 m2"</span>,</span>
+<span id="cb36-53"><a href="#cb36-53" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">90</span> <span class="sc">&amp;</span> SUT <span class="sc">&lt;=</span> <span class="dv">105</span> <span class="sc">~</span> <span class="st">"91-105 m2"</span>,</span>
+<span id="cb36-54"><a href="#cb36-54" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">105</span> <span class="sc">&amp;</span> SUT <span class="sc">&lt;=</span> <span class="dv">120</span> <span class="sc">~</span> <span class="st">"106-120 m2"</span>,</span>
+<span id="cb36-55"><a href="#cb36-55" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">120</span> <span class="sc">&amp;</span> SUT <span class="sc">&lt;=</span> <span class="dv">150</span> <span class="sc">~</span> <span class="st">"121-150 m2"</span>,</span>
+<span id="cb36-56"><a href="#cb36-56" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">150</span> <span class="sc">&amp;</span> SUT <span class="sc">&lt;=</span> <span class="dv">180</span> <span class="sc">~</span> <span class="st">"151-180 m2"</span>,</span>
+<span id="cb36-57"><a href="#cb36-57" aria-hidden="true" tabindex="-1"></a>      SUT <span class="sc">&gt;</span> <span class="dv">180</span> <span class="sc">~</span> <span class="st">"Más de 180 m2"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb36-58"><a href="#cb36-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb36-59"><a href="#cb36-59" aria-hidden="true" tabindex="-1"></a>    <span class="at">ANOCONS_R =</span> <span class="fu">case_when</span>(</span>
+<span id="cb36-60"><a href="#cb36-60" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"&lt;1900"</span>,</span>
+<span id="cb36-61"><a href="#cb36-61" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">3</span> <span class="sc">~</span> <span class="st">"1900 a 1920"</span>,</span>
+<span id="cb36-62"><a href="#cb36-62" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">4</span> <span class="sc">~</span> <span class="st">"1921 a 1940"</span>,</span>
+<span id="cb36-63"><a href="#cb36-63" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">5</span> <span class="sc">~</span> <span class="st">"1941 a 1950"</span>,</span>
+<span id="cb36-64"><a href="#cb36-64" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">6</span> <span class="sc">~</span> <span class="st">"1951 a 1960"</span>,</span>
+<span id="cb36-65"><a href="#cb36-65" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">7</span> <span class="sc">~</span> <span class="st">"1961 a 1970"</span>,</span>
+<span id="cb36-66"><a href="#cb36-66" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">8</span> <span class="sc">~</span> <span class="st">"1971 a 1980"</span>,</span>
+<span id="cb36-67"><a href="#cb36-67" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">9</span> <span class="sc">~</span> <span class="st">"1981 a 1990"</span>,</span>
+<span id="cb36-68"><a href="#cb36-68" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">10</span> <span class="sc">~</span> <span class="st">"1991 a 2001"</span>,</span>
+<span id="cb36-69"><a href="#cb36-69" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">11</span> <span class="sc">~</span> <span class="st">"2002"</span>,</span>
+<span id="cb36-70"><a href="#cb36-70" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">12</span> <span class="sc">~</span> <span class="st">"2003"</span>,</span>
+<span id="cb36-71"><a href="#cb36-71" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">13</span> <span class="sc">~</span> <span class="st">"2004"</span>,</span>
+<span id="cb36-72"><a href="#cb36-72" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">14</span> <span class="sc">~</span> <span class="st">"2005"</span>,</span>
+<span id="cb36-73"><a href="#cb36-73" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">15</span> <span class="sc">~</span> <span class="st">"2006"</span>,</span>
+<span id="cb36-74"><a href="#cb36-74" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">16</span> <span class="sc">~</span> <span class="st">"2007"</span>,</span>
+<span id="cb36-75"><a href="#cb36-75" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">17</span> <span class="sc">~</span> <span class="st">"2008"</span>,</span>
+<span id="cb36-76"><a href="#cb36-76" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">18</span> <span class="sc">~</span> <span class="st">"2009"</span>,</span>
+<span id="cb36-77"><a href="#cb36-77" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">19</span> <span class="sc">~</span> <span class="st">"2010"</span>,</span>
+<span id="cb36-78"><a href="#cb36-78" aria-hidden="true" tabindex="-1"></a>    ANOCONS <span class="sc">==</span> <span class="dv">20</span> <span class="sc">~</span> <span class="st">"2011"</span>))</span>
+<span id="cb36-79"><a href="#cb36-79" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb36-80"><a href="#cb36-80" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rm</span>(microdatos2021, microdatos2021_limpio, microdatos2011)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="análisis-univariable-censo-2011" class="level3">
+<h3 class="anchored" data-anchor-id="análisis-univariable-censo-2011">Análisis univariable censo 2011</h3>
+<p>Las variables de la población se analizan al compararlas con el censo de 2021. Sobre las viviendas:</p>
+<ul>
+<li><p>Estado. En su gran mayoría los edificios están en un estado ‘Bueno’.</p></li>
+<li><p>Ascensor, accesbilidad, agua caliente central. Más o menos en la misma proporción, la mayoría de edificios cuentan con estos servicios. No se va a desarrollar mucho más estas variables pues desaparecen en el censo de 2021, que serían los datos que nos interesan más.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Edad</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>EDAD, <span class="at">fill =</span> EDAD))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">y=</span>VAREDAD))<span class="sc">+</span><span class="fu">geom_boxplot</span>(<span class="at">fill=</span><span class="st">"Orange"</span>)</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The following aesthetics were dropped during statistical transformation: fill
+ℹ This can happen when ggplot fails to infer the correct grouping structure in
+  the data.
+ℹ Did you forget to specify a `group` aesthetic or to convert a numerical
+  variable into a factor?</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Estado civil</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ECIVIL, <span class="at">fill =</span> ECIVIL))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Nacionalidad</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>NACIONALIDAD, <span class="at">fill =</span> NACIONALIDAD))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Relación laboral</span></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>RELA_R, <span class="at">fill =</span> RELA_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a><span class="co">#Municipios rurales</span></span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>HABITAT, <span class="at">fill =</span> HABITAT))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,c,d,</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-15-2.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># VIVIENDAS</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a><span class="co">#Estado</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>viviendas11<span class="sc">$</span>ESTADO <span class="ot">&lt;-</span> <span class="fu">factor</span>(viviendas11<span class="sc">$</span>ESTADO)</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(viviendas11,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ESTADO, <span class="at">fill =</span> ESTADO))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Ascensor</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>viviendas11<span class="sc">$</span>ASCENSOR <span class="ot">&lt;-</span> <span class="fu">factor</span>(viviendas11<span class="sc">$</span>ASCENSOR)</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(viviendas11,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ASCENSOR, <span class="at">fill =</span> ASCENSOR))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a><span class="co">#Accesibilidad</span></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>viviendas11<span class="sc">$</span>ACCESIB <span class="ot">&lt;-</span> <span class="fu">factor</span>(viviendas11<span class="sc">$</span>ACCESIB)</span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(viviendas11,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ACCESIB, <span class="at">fill =</span> ACCESIB))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a><span class="co">#Agua caliente central</span></span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>viviendas11<span class="sc">$</span>ACAL <span class="ot">&lt;-</span> <span class="fu">factor</span>(viviendas11<span class="sc">$</span>ACAL)</span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(viviendas11,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ACAL, <span class="at">fill =</span> ACAL))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,c,d,</span>
+<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-15-3.png" class="img-fluid" width="1152"></p>
+</div>
+</div>
+</section>
+<section id="comparación-censo-2011--2021" class="level2">
+<h2 class="anchored" data-anchor-id="comparación-censo-2011--2021">Comparación censo 2011- 2021</h2>
+<p>Las características de la población afectarán a cuáles son las tendencias con respecto a la vivienda.</p>
+<ul>
+<li>Edad. La población está más envejecida en 2021.</li>
+<li>Estado civil. En 2021 se invierte la tendencia de 2011 y hay más solteros que casados. También aumenta ligeramente la cantidad de personas divorciadas.</li>
+<li>Nacionalidad. Ha aumentado la población extranjera.</li>
+<li>Relación laboral. Hay menos personas desempleadas en 2021.</li>
+</ul>
+<p>Con respecto a las características de las viviendas:</p>
+<ul>
+<li>Régimen de tenencia. En 2021 han aumentado las viviendas de alquiler en comparación con el 2011 en un 5%, en detrimento de la tenencia en propiedad. Hay menos personas propietarias de vivienda, y más que recurren al alquiler. Por otra parte, la categoría de ‘otro’ se mantiene estable, al igual que la cantidad de viviendas no principales.</li>
+<li>Viviendas principales. La cantidad de viviendas principales se ha mantenido igual. En 2011 había casi el doble de viviendas secundarias que vacías, pero en 2021 ya no se pueden comparar esos datos. Alrededor de un 30% de las viviendas son no principales (10% vacías, 19% secundarias).</li>
+<li>Superficie. La media de la superficie de las viviendas principales es de 90 metros cuadrados en 2021, siendo menor a la media de 2011 (101 m2). La mediana en 2021 es de 78, también menor a 2011. La superficie de las viviendas ahora es más reducida.</li>
+<li>Año de construcción.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co">#PERSONAS</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a><span class="co">#Edad</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>EDAD))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>VAREDAD))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">y=</span>EDAD))<span class="sc">+</span><span class="fu">geom_boxplot</span>(<span class="at">fill=</span><span class="st">"blue"</span>)</span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">y=</span>VAREDAD))<span class="sc">+</span><span class="fu">geom_boxplot</span>(<span class="at">fill=</span><span class="st">"Orange"</span>)</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,c,d,</span>
+<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Estado civil</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>a<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ECIVIL, <span class="at">fill =</span> ECIVIL))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>b<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ECIVIL, <span class="at">fill =</span> ECIVIL))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-2.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Nacionalidad</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>NACIONALIDAD, <span class="at">fill =</span> NACIONALIDAD))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>NACIONALIDAD, <span class="at">fill =</span> NACIONALIDAD))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-3.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Relación laboral</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>RELA_R, <span class="at">fill =</span> RELA_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>RELA_R, <span class="at">fill =</span> RELA_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-4.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Nivel de estudios</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>a<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ESTUDIOS, <span class="at">fill =</span> ESTUDIOS))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>b<span class="ot">&lt;-</span><span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ESTUDIOS, <span class="at">fill =</span> ESTUDIOS))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-5.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Hábitat rural o urbano</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2011_limpio,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>HABITAT, <span class="at">fill =</span> HABITAT))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(microdatos2021_rec,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>HABITAT, <span class="at">fill =</span> HABITAT))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)</span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-6.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co">#VIVIENDAS</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="co">#Régimen de tenencia</span></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>a<span class="ot">&lt;-</span><span class="fu">ggplot</span>(viviendas11,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>TENEN_R, <span class="at">fill =</span> TENEN_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)<span class="sc">+</span><span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.6</span>))</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>b<span class="ot">&lt;-</span><span class="fu">ggplot</span>(viviendas21,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>TENEN_VIV_R, <span class="at">fill =</span> TENEN_VIV_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)<span class="sc">+</span><span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.6</span>))</span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a>(<span class="fu">mean</span>(viviendas21<span class="sc">$</span>TENEN_VIV_R<span class="sc">==</span> <span class="st">"Alquiler"</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">*</span> <span class="dv">100</span>)<span class="sc">-</span></span>
+<span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a>(<span class="fu">mean</span>(viviendas11<span class="sc">$</span>TENEN_R<span class="sc">==</span> <span class="st">"Alquiler"</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">*</span> <span class="dv">100</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 5.105709</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Vivienda principal o no</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>a<span class="ot">&lt;-</span><span class="fu">ggplot</span>(viviendas11,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>PRINCIPAL, <span class="at">fill =</span> PRINCIPAL))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>b<span class="ot">&lt;-</span><span class="fu">ggplot</span>(viviendas21,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>PRINCIPAL, <span class="at">fill =</span> PRINCIPAL))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(viviendas11<span class="sc">$</span>PRINCIPAL <span class="sc">==</span> <span class="st">"Vacía"</span>) <span class="sc">*</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 10.64534</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(viviendas11<span class="sc">$</span>PRINCIPAL <span class="sc">==</span> <span class="st">"Secundaria"</span>) <span class="sc">*</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 19.64396</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-7.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Superficie</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>a<span class="ot">&lt;-</span><span class="fu">ggplot</span>(viviendas11,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>SUT_R, <span class="at">fill =</span> SUT_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)<span class="sc">+</span><span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>))</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>b<span class="ot">&lt;-</span><span class="fu">ggplot</span>(viviendas21,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>SUPERF_R, <span class="at">fill =</span> SUPERF_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)<span class="sc">+</span><span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>))</span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(viviendas11<span class="sc">$</span>SUT)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] NA</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(viviendas21<span class="sc">$</span>SUPERF, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 90.58969</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="fu">median</span>(viviendas11<span class="sc">$</span>SUT, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 90</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="fu">median</span>(viviendas21<span class="sc">$</span>SUPERF, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 78</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-8.png" class="img-fluid" width="1152"></p>
+</div>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Año de construcción</span></span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>a<span class="ot">&lt;-</span><span class="fu">ggplot</span>(viviendas11,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ANOCONS_R, <span class="at">fill =</span> ANOCONS_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2011"</span>)</span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>b<span class="ot">&lt;-</span><span class="fu">ggplot</span>(viviendas21,<span class="at">mapping=</span><span class="fu">aes</span>(<span class="at">x=</span>ANOCO_R, <span class="at">fill =</span> ANOCO_R))<span class="sc">+</span><span class="fu">geom_bar</span>(<span class="fu">aes</span>(<span class="at">y=</span>..count..<span class="sc">/</span><span class="fu">sum</span>(..count..)))<span class="sc">+</span><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"2021"</span>)</span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,</span>
+<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-16-9.png" class="img-fluid" width="1152"></p>
+</div>
+</div>
+<section id="viviendas-vacías-y-secundarias-por-ccaa" class="level3">
+<h3 class="anchored" data-anchor-id="viviendas-vacías-y-secundarias-por-ccaa">Viviendas vacías y secundarias por CCAA</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>ccaas <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">CodigoProvincia =</span> <span class="fu">c</span>(<span class="st">"1"</span>, <span class="st">"2"</span>, <span class="st">"3"</span>, <span class="st">"4"</span>, <span class="st">"33"</span>, <span class="st">"5"</span>, <span class="st">"6"</span>, <span class="st">"8"</span>, <span class="st">"9"</span>, <span class="st">"10"</span>, <span class="st">"11"</span>, <span class="st">"39"</span>, <span class="st">"12"</span>, <span class="st">"13"</span>, <span class="st">"14"</span>, <span class="st">"16"</span>, <span class="st">"17"</span>, <span class="st">"18"</span>, <span class="st">"19"</span>, <span class="st">"20"</span>, <span class="st">"21"</span>, <span class="st">"22"</span>, <span class="st">"23"</span>, <span class="st">"7"</span>, <span class="st">"24"</span>, <span class="st">"15"</span>, <span class="st">"35"</span>, <span class="st">"25"</span>, <span class="st">"26"</span>, <span class="st">"27"</span>, <span class="st">"28"</span>, <span class="st">"29"</span>, <span class="st">"30"</span>, <span class="st">"31"</span>, <span class="st">"32"</span>, <span class="st">"34"</span>, <span class="st">"36"</span>, <span class="st">"37"</span>,</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a><span class="st">"38"</span>, <span class="st">"39"</span>, <span class="st">"40"</span>, <span class="st">"41"</span>, <span class="st">"42"</span>, <span class="st">"43"</span>, <span class="st">"44"</span>, <span class="st">"45"</span>, <span class="st">"46"</span>, <span class="st">"47"</span>, <span class="st">"48"</span>, <span class="st">"49"</span>, <span class="st">"50"</span>, <span class="st">"51"</span>, <span class="st">"52"</span>),</span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">CCAA =</span> <span class="fu">c</span>(<span class="st">"País Vasco"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"Comunidad Valenciana"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Asturias"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Extremadura"</span>, <span class="st">"Cataluña"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Extremadura"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Cantabria"</span>, <span class="st">"Comunidad Valenciana"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"Cataluña"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"País Vasco"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Aragón"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Islas Baleares"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Galicia"</span>, <span class="st">"Canarias"</span>, <span class="st">"Cataluña"</span>, <span class="st">"La Rioja"</span>, <span class="st">"Galicia"</span>, <span class="st">"Comunidad de Madrid"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Comunidad de Murcia"</span>, <span class="st">"Comunidad Foral de Navarra"</span>, <span class="st">"Galicia"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Galicia"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Canarias"</span>, <span class="st">"Cantabria"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Andalucía"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Cataluña"</span>, <span class="st">"Aragón"</span>, <span class="st">"Castilla-La Mancha"</span>, <span class="st">"Comunidad Valenciana"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"País Vasco"</span>, <span class="st">"Castilla y León"</span>, <span class="st">"Aragón"</span>, <span class="st">"Ceuta"</span>, <span class="st">"Melilla"</span>))</span>
+<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-7"><a href="#cb64-7" aria-hidden="true" tabindex="-1"></a>viviendas11<span class="sc">$</span>CPRO <span class="ot">&lt;-</span> <span class="fu">as.character</span>(viviendas11<span class="sc">$</span>CPRO)</span>
+<span id="cb64-8"><a href="#cb64-8" aria-hidden="true" tabindex="-1"></a>viviendas11 <span class="ot">&lt;-</span> viviendas11 <span class="sc">|&gt;</span> </span>
+<span id="cb64-9"><a href="#cb64-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(ccaas, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"CPRO"</span> <span class="ot">=</span> <span class="st">"CodigoProvincia"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in left_join(viviendas11, ccaas, by = c(CPRO = "CodigoProvincia")): Detected an unexpected many-to-many relationship between `x` and `y`.
+ℹ Row 23100 of `x` matches multiple rows in `y`.
+ℹ Row 1 of `y` matches multiple rows in `x`.
+ℹ If a many-to-many relationship is expected, set `relationship =
+  "many-to-many"` to silence this warning.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="co">#microdatos2011_limpio &lt;- microdatos2021_limpio |&gt; </span></span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a><span class="co">#    left_join(ccaas, by = c("CPRO" = "CodigoProvincia"))</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<ul>
+<li><p>Vacías. Las comunidades con más viviendas sin ocupar son Galicia, La Rioja y Murcia.</p></li>
+<li><p>Secundarias. Las comunidades con más viviendas secundarias son Castilla y León, Castilla-La Mancha y Aragón.</p></li>
+</ul>
+<p>En general, se observa que son comunidades con menor población o densidad de población. Ya se veía en los datos del censo de 2021 que las comunidades con más viviendas no principales eran estas mismas, por lo cual vemos que se sigue manteniendo esta tendencia. No podemos distinguir sin embargo cómo ha cambiado las viviendas vacías y secundarias específicamente. Parece que la gran cantidad de viviendas no principales en estas comunidades se debe más a la existencia de viviendas secundarias en lugar de vacías.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> viviendas11 <span class="sc">|&gt;</span> </span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CCAA) <span class="sc">|&gt;</span> </span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">PorcentajeViviendasVaciasCCAA =</span> <span class="fu">round</span>(<span class="fu">mean</span>(PRINCIPAL <span class="sc">==</span> <span class="st">"Vacía"</span>) <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(PorcentajeViviendasVaciasCCAA)) <span class="sc">|&gt;</span> </span>
+<span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(CCAA, <span class="sc">-</span>PorcentajeViviendasVaciasCCAA), <span class="at">y =</span> PorcentajeViviendasVaciasCCAA)) <span class="sc">+</span></span>
+<span id="cb67-6"><a href="#cb67-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">fill =</span> <span class="st">"skyblue"</span>) <span class="sc">+</span></span>
+<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Porcentaje de Viviendas Vacías por Comunidad Autónoma"</span>,</span>
+<span id="cb67-8"><a href="#cb67-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Comunidad Autónoma"</span>,</span>
+<span id="cb67-9"><a href="#cb67-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Porcentaje de Viviendas Vacías"</span>) <span class="sc">+</span></span>
+<span id="cb67-10"><a href="#cb67-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb67-11"><a href="#cb67-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>))</span>
+<span id="cb67-12"><a href="#cb67-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-13"><a href="#cb67-13" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> viviendas11 <span class="sc">|&gt;</span> </span>
+<span id="cb67-14"><a href="#cb67-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CCAA) <span class="sc">|&gt;</span> </span>
+<span id="cb67-15"><a href="#cb67-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">PorcentajeViviendasSecundariasCCAA =</span> <span class="fu">round</span>(<span class="fu">mean</span>(PRINCIPAL <span class="sc">==</span> <span class="st">"Secundaria"</span>) <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb67-16"><a href="#cb67-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(PorcentajeViviendasSecundariasCCAA)) <span class="sc">|&gt;</span> </span>
+<span id="cb67-17"><a href="#cb67-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(CCAA, <span class="sc">-</span>PorcentajeViviendasSecundariasCCAA), <span class="at">y =</span> PorcentajeViviendasSecundariasCCAA)) <span class="sc">+</span></span>
+<span id="cb67-18"><a href="#cb67-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">fill =</span> <span class="st">"skyblue"</span>) <span class="sc">+</span></span>
+<span id="cb67-19"><a href="#cb67-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Porcentaje de Viviendas Secundarias por Comunidad Autónoma"</span>,</span>
+<span id="cb67-20"><a href="#cb67-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Comunidad Autónoma"</span>,</span>
+<span id="cb67-21"><a href="#cb67-21" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Porcentaje de Viviendas Secundarias"</span>) <span class="sc">+</span></span>
+<span id="cb67-22"><a href="#cb67-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb67-23"><a href="#cb67-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>))</span>
+<span id="cb67-24"><a href="#cb67-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-25"><a href="#cb67-25" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span>  <span class="fu">ggplot</span>(regimen_ccaa <span class="sc">%&gt;%</span> <span class="fu">filter</span>(TENEN_VIV <span class="sc">==</span> <span class="st">"No principal"</span>),</span>
+<span id="cb67-26"><a href="#cb67-26" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(CCAA, <span class="sc">-</span>Porcentaje), <span class="at">y =</span> Porcentaje, <span class="at">fill =</span> TENEN_VIV)) <span class="sc">+</span></span>
+<span id="cb67-27"><a href="#cb67-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>, <span class="at">position =</span> <span class="st">"stack"</span>, <span class="at">fill =</span> <span class="st">"#3A7EEE"</span>) <span class="sc">+</span></span>
+<span id="cb67-28"><a href="#cb67-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"No principal por CCAA"</span>,</span>
+<span id="cb67-29"><a href="#cb67-29" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">"Tipo de Régimen de Tenencia"</span>) <span class="sc">+</span></span>
+<span id="cb67-30"><a href="#cb67-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb67-31"><a href="#cb67-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>(<span class="at">ylim=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">75</span>))</span>
+<span id="cb67-32"><a href="#cb67-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-33"><a href="#cb67-33" aria-hidden="true" tabindex="-1"></a><span class="fu">ggarrange</span>(a,b,c,</span>
+<span id="cb67-34"><a href="#cb67-34" aria-hidden="true" tabindex="-1"></a>          <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Microdatos-censo-2021_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid" width="1152"></p>
+</div>
+</div>
+</section>
+<section id="modelo-viviendas-vacías" class="level3">
+<h3 class="anchored" data-anchor-id="modelo-viviendas-vacías">Modelo viviendas vacías</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>modelo <span class="ot">&lt;-</span> <span class="fu">lm</span>(PRINCIPAL <span class="sc">==</span> <span class="st">"Vacía"</span> <span class="sc">~</span> HABITAT, <span class="at">data =</span> viviendas11)</span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(modelo)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = PRINCIPAL == "Vacía" ~ HABITAT, data = viviendas11)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.12540 -0.12540 -0.12540 -0.07918  0.92082 
+
+Coefficients:
+                Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)    0.1253971  0.0002609   480.6   &lt;2e-16 ***
+HABITATUrbano -0.0462209  0.0004072  -113.5   &lt;2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.3075 on 2356882 degrees of freedom
+Multiple R-squared:  0.005437,  Adjusted R-squared:  0.005437 
+F-statistic: 1.288e+04 on 1 and 2356882 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

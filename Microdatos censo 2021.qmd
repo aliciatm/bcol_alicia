@@ -12,9 +12,10 @@ editor: visual
 
 -   Cruce sencillo de genero por régimen de vivienda, tenencia… diferencias ámbitos rural y urbano.
 
+-   Analizar evolución entre datos censo 2011 y 2021
+
 ## Cosas que hacer
 
--   Analizar evolución entre datos censo 2011 y 2021
 -   Analizar la oferta de vivienda
     -   Juntar database de ayuntamientos para ver cómo se concentra la propiedad, juntar database de precios.....
 
@@ -64,7 +65,7 @@ metadatos_limpio <- metadatos2021 |>
 
 ```
 
-## Recodificaciones
+##  Recodificaciones
 
 ```{r}
 microdatos2021_rec <- microdatos2021_limpio |> 
@@ -140,7 +141,7 @@ viviendas21 <- viviendas21 |>
 
 ## Descriptivo de censo 2021
 
-```{r}
+```{r, fig.height=6, fig.width=12} 
 # Descriptivos de variables
 a<-ggplot(microdatos2021_rec,mapping=aes(x=SITU, fill = SITU))+geom_bar(aes(y=..count../sum(..count..)))
 b<-ggplot(microdatos2021_rec,mapping=aes(x=SEXO, fill = SEXO))+geom_bar(aes(y=..count../sum(..count..)))
@@ -154,7 +155,7 @@ b<-ggplot(microdatos2021_rec,mapping=aes(x=SUP_VIV, fill = SUP_VIV))+geom_bar(ae
 c<-ggplot(microdatos2021_rec,mapping=aes(x=SUP_OCU_VIV, fill = SUP_OCU_VIV))+geom_bar(aes(y=..count../sum(..count..)))
 d<-ggplot(microdatos2021_rec,mapping=aes(x=TIPO_HOG, fill = TIPO_HOG))+geom_bar(aes(y=..count../sum(..count..)))
 
-ggarrange(a,b,c,d,
+ggarrange(b,c,d,
           ncol = 2, nrow = 2)
 
 a<-ggplot(microdatos2021_rec,mapping=aes(y=VAREDAD))+geom_boxplot(fill="Orange")
@@ -176,7 +177,7 @@ ggarrange(a,b,
 
     -   Régimen de tenencia x Superficie de vivienda. Las viviendas de alquiler tienden a ser más pequeñas; menos en el caso de las viviendas con la mayor superficie. También son las que menos se conoce la superficie (99 = no consta).
 
-```{r}
+```{r, fig.height=6, fig.width=12} 
 #Régimen de tenencia x RURAL, EDAD, SEXO, Superficie vivienda
 a <- ggplot(microdatos2021_rec, aes(x = HABITAT, fill = TENEN_VIV)) +
   geom_bar(position = "fill", color = "white") + theme_minimal()
@@ -203,7 +204,7 @@ ggarrange(a,b,c,d,
 
     -   Rural x Año de construcción. Hay menor proporción de viviendas más recientes en las zonas rurales.
 
-```{r}
+```{r, fig.height=6, fig.width=12} 
 #Rural x Superficie, Tipo de edificio, Superficie por ocupante, Nº plantas sobre rasante, Año de construcción
 
 a <- ggplot(microdatos2021_rec, aes(x = SUP_VIV, fill = HABITAT)) +
@@ -262,7 +263,7 @@ microdatos2021_rec <- microdatos2021_rec |>
 
 Con respecto a las provincias, las que tienen mayor proporción de viviendas no principales (por encima del 50% del total) son Ávila, Teruel, Soria, Zamora y Ourense. Esto encaja con ser zonas con muy baja densidad de población y que quizá tienen muchas viviendas sin residentes principales actualmente. Por otra parte, las provincias con menor proporción de viviendas no principales son Gipuzkoa, Madrid, Bizkaia, Melilla y Ceuta. Esto puede deberse al fenómeno contrario, son ciudades con una alta densidad de población que puede indicar que haya menos viviendas no ocupadas, y quizá, una menor oferta disponible de vivienda.
 
-```{r}
+```{r, fig.height=6, fig.width=12} 
 # Porcentajes de regimen de tenencia por CCAA
 
 regimen_ccaa <- viviendas21 |> 
@@ -349,7 +350,7 @@ regimen_provincias |>
 
 Se considera cuántos municipios rurales existen por provincia y por CCAA para poder vislumbrar alguna relación entre la presencia de municipios rurales y otros análisis de las CCAA como el régimen de tenencia. Se observa en el gráfico que las comunidades con más municipios rurales son Extremadura, Castilla-La Mancha, Castilla y León, Navarra, Cantabria... Finalmente son comunidades con poca población. Podría precisarse la definición y características de un municipio rural o no para encontrar resultados más relevantes y que no se basen únicamente en la población.
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 # Municipios rurales por provincia
 
 microdatos2021_rec |> 
@@ -378,20 +379,20 @@ microdatos2021_rec %>%
 
 Aparece que existe correlación distinta a 0, pero es un valor muy bajo y cercano a 0.
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 
-pop <- microdatos2021_rec |> 
+cor <- microdatos2021_rec |> 
   group_by(CPRO) |> 
   summarize(PorcentajeRural = round(mean(HABITAT == "Rural") * 100, 2)) |> 
   print(arrange(desc(PorcentajeRural))) |> 
   ungroup()
 
-#pop$TENEN_VIV <- as.numeric(pop$TENEN_VIV)
+cor <- cor |> 
+  left_join(viviendas21, by = "CPRO")
 
-#pop <- pop |> 
-#  left_join(viviendas21, by = "CPRO")
+cor$TENEN_VIV <- as.numeric(cor$TENEN_VIV)
 
-#  cor.test(pop$PorcentajeRural, pop$TENEN_VIV, method = "pearson")
+cor.test(cor$PorcentajeRural, cor$TENEN_VIV, method = "pearson")
 
 ```
 
@@ -545,7 +546,7 @@ Las variables de la población se analizan al compararlas con el censo de 2021. 
 
 -   Ascensor, accesbilidad, agua caliente central. Más o menos en la misma proporción, la mayoría de edificios cuentan con estos servicios. No se va a desarrollar mucho más estas variables pues desaparecen en el censo de 2021, que serían los datos que nos interesan más.
 
-```{r}
+```{r, fig.height=6, fig.width=12} 
 
 #Edad
 a <-ggplot(microdatos2011_limpio,mapping=aes(x=EDAD, fill = EDAD))+geom_bar(aes(y=..count../sum(..count..)))
@@ -608,7 +609,7 @@ Con respecto a las características de las viviendas:
 -   Superficie. La media de la superficie de las viviendas principales es de 90 metros cuadrados en 2021, siendo menor a la media de 2011 (101 m2). La mediana en 2021 es de 78, también menor a 2011. La superficie de las viviendas ahora es más reducida.
 -   Año de construcción.
 
-```{r}
+```{r, fig.height=6, fig.width=12} 
 #PERSONAS
 
 #Edad
@@ -720,7 +721,7 @@ viviendas11 <- viviendas11 |>
 
 En general, se observa que son comunidades con menor población o densidad de población. Ya se veía en los datos del censo de 2021 que las comunidades con más viviendas no principales eran estas mismas, por lo cual vemos que se sigue manteniendo esta tendencia. No podemos distinguir sin embargo cómo ha cambiado las viviendas vacías y secundarias específicamente. Parece que la gran cantidad de viviendas no principales en estas comunidades se debe más a la existencia de viviendas secundarias en lugar de vacías.
 
-```{r}
+```{r, fig.height=6, fig.width=12} 
 a <- viviendas11 |> 
   group_by(CCAA) |> 
   summarize(PorcentajeViviendasVaciasCCAA = round(mean(PRINCIPAL == "Vacía") * 100, 2)) |> 
