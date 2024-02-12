@@ -19,15 +19,95 @@ library(readxl)
 Esta base de datos del INE existen datos desde agosto del 2020 hasta agosto del 2023. Es una 'estadística experimental' donde se scrappean los datos de las tres plataformas de alojamiento turístico más utilizadas.
 
 ```{r}
-turismo <- read_excel("exp_viv_turistica_tabla5_AGO2023.xlsx", sheet = 3)
+turismo <- read_excel("vivienda turística/exp_viv_turistica_tabla5_FEB2021.xlsx", sheet = 3)
 
 ```
 
-Select
+### Seleccionar variables turismo
 
 ```{r}
 turismo <- turismo |> 
-  select()
+  select(PERIODO, CODIGO, PROV, PROV_LITERAL, MUN, MUN_LITERAL, `VIVIENDA TURISTICA`, PLAZAS, `PORCENTAJE VIVIENDA TURISTICA`) |> 
+  rename(CPRO = PROV)
 ```
 
-hacer database mas pequeña y usar eso,,??
+### Agrupar por provincias
+
+```{r}
+
+turismo_red <- turismo |> 
+  group_by(CPRO) |> 
+ summarise(
+    TOTAL_VIVIENDAS_TURISTICAS = sum(`VIVIENDA TURISTICA`),
+    TOTAL_PLAZAS = sum(PLAZAS)) |> 
+  ungroup() 
+```
+
+## Join con viviendas 2021
+### Cargar viviendas 2021
+
+```{r}
+
+viviendas21 <- load("C:/Users/alici/OneDrive/Documentos/Clase/Máster/Bcol/Microdatos2021/Viviendas/R/CensoViviendas_2021.RData")
+
+viviendas21 <- Microdatos
+
+rm(Microdatos, Metadatos)
+
+#Seleccionar y añadir variables a viviendas21
+viviendas21 <- viviendas21 |> 
+  select(CPRO, CMUN, TENEN_VIV, SUPERF, ANOCO) |> 
+  mutate(
+     HABITAT = case_when(
+       CMUN %in% c(991, 992, 993) ~ "Rural",
+       TRUE ~ "Urbano"))
+
+```
+
+### Juntar tablas
+
+```{r}
+# Juntar viviendas turísticas por provincia con viviendas21
+turismo <- left_join(turismo_red, viviendas21, by = c("CPRO" = "CPRO"))
+
+```
+
+## Viviendas turísticas y ruralidad
+
+Hay una correlación negativa entre el porcentaje de viviendas turísticas y el porcentaje de municipios rurales. Las provincias con un alto porcentaje de viviendas turísticas suelen tener menos municipios rurales. Por el contrario, las provincias con un bajo porcentaje de viviendas turísticas tienden a tener más municipios rurales.
+
+Dado que veíamos que había mas viviendas secundarias y vacías en zonas más rurales, vemos que estas viviendas no son con fines turísticos en su mayoría.
+
+```{r}
+
+#Crear variable de porcentaje rural y porcentaje viviendas turísticas POR PROVINCIAS
+
+turismo <- turismo |> 
+  group_by(CPRO) |> 
+  mutate(PorcentajeRuralProvincias = round(mean(HABITAT == "Rural") * 100, 2)) |> 
+  mutate(TOTAL_VIVIENDAS = n()) |> 
+  mutate(PorcentajeTuristicasProvincias = round((TOTAL_VIVIENDAS_TURISTICAS/TOTAL_VIVIENDAS)*100, 2))
+
+  
+cor(turismo$PorcentajeTuristicasProvincias, turismo$PorcentajeRuralProvincias, method = "pearson")
+
+#Grafico
+
+turismo_unique <- turismo %>%
+  distinct(PorcentajeTuristicasProvincias, .keep_all = TRUE) |>   distinct(PorcentajeRuralProvincias, .keep_all = TRUE)
+
+ggplot(turismo_unique, aes(x = PorcentajeTuristicasProvincias, y = PorcentajeRuralProvincias)) +
+  geom_point() +  
+  labs(title = "Relación entre Porcentaje de Viviendas Turísticas y Porcentaje de Municipios Rurales por Provincia", 
+       x = "Porcentaje de Viviendas Turísticas",
+       y = "Porcentaje de Municipios Rurales") +  
+  theme_minimal() 
+
+
+modelo <- lm(PorcentajeTuristicasProvincias ~ PorcentajeRuralProvincias, data = turismo)
+
+summary(modelo)
+
+
+```
+Hacer lo mismo pero no por provincias, sino modelo manteniendo las secciones censales y la cantidad de viviendas turísticas. Hay que hacer equivalentes el código de municipio de viviendas21 con la database de turismo, clasificar cada sección por rural o urbana.
