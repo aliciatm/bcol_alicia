@@ -37,10 +37,11 @@ turismo <- turismo |>
 
 turismo_red <- turismo |> 
   group_by(CPRO) |> 
- summarise(
+  summarise(
     TOTAL_VIVIENDAS_TURISTICAS = sum(`VIVIENDA TURISTICA`),
     TOTAL_PLAZAS = sum(PLAZAS)) |> 
-  ungroup() 
+  ungroup()
+  
 ```
 
 ## Join con viviendas 2021
@@ -79,7 +80,6 @@ Hay una correlación negativa entre el porcentaje de viviendas turísticas y el 
 Dado que veíamos que había mas viviendas secundarias y vacías en zonas más rurales, vemos que estas viviendas no son con fines turísticos en su mayoría.
 
 ```{r}
-
 #Crear variable de porcentaje rural y porcentaje viviendas turísticas POR PROVINCIAS
 
 turismo <- turismo |> 
@@ -88,10 +88,12 @@ turismo <- turismo |>
   mutate(TOTAL_VIVIENDAS = n()) |> 
   mutate(PorcentajeTuristicasProvincias = round((TOTAL_VIVIENDAS_TURISTICAS/TOTAL_VIVIENDAS)*100, 2))
 
-  
 cor(turismo$PorcentajeTuristicasProvincias, turismo$PorcentajeRuralProvincias, method = "pearson")
 
-#Grafico
+```
+En cuanto al gráfico vemos que hay un conjunto de provincias con un porcentaje de viviendas turísticas menor a 15 que siguen cierta tendencia (pocas viviendas turísticas = más municipios rurales), pero hay varias provincias con un muy alto porcentaje de viviendas turísticas en comparación y con un porcentaje de municipios rurales más bajo que la media.
+```{r, fig.height=6, fig.width=12}
+#Gráfico
 
 turismo_unique <- turismo %>%
   distinct(PorcentajeTuristicasProvincias, .keep_all = TRUE) |>   distinct(PorcentajeRuralProvincias, .keep_all = TRUE)
@@ -102,12 +104,47 @@ ggplot(turismo_unique, aes(x = PorcentajeTuristicasProvincias, y = PorcentajeRur
        x = "Porcentaje de Viviendas Turísticas",
        y = "Porcentaje de Municipios Rurales") +  
   theme_minimal() 
+```
 
+Estas provincias son las Islas Baleares, Alicante, Cádiz, Girona, Málaga, Las Palmas, Santa Cruz de Tenerife y Tarragona. Son ciudades con fuerte afluencia turística de costa. Islas Baleares tiene un 42,54% de las viviendas destinadas al turismo, lo cual es un porcentaje altísimo.
+```{r}
+turismo_unique |> 
+  filter(PorcentajeTuristicasProvincias > 15) |> 
+    print()
+  
+```
 
-modelo <- lm(PorcentajeTuristicasProvincias ~ PorcentajeRuralProvincias, data = turismo)
+### Viviendas turísticas por CCAA
 
-summary(modelo)
+Se muestra el mismo patrón por Comunidades autónomas. Vemos que provincias como Castilla y León o Castilla-La Mancha, que eran comunidades con la mayoría de viviendas secundarias, ahora están de las más bajas. Con lo cual estas viviendas secundarias no son orientadas al turismo en su mayoría.   
 
+```{r, fig.height=6, fig.width=12}
+
+#Añadir columna CCAA
+ccaas <- data.frame(
+  CodigoProvincia = c("01", "02", "03", "04", "33", "05", "06", "08", "09", "10", "11", "39", "12", "13", "14", "16", "17", "18", "19", "20", "21", "22", "23", "07", "24", "15", "35", "25", "26", "27", "28", "29", "30", "31", "32", "34", "36", "37",
+"38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52"),
+  
+  CCAA = c("País Vasco", "Castilla-La Mancha", "Comunidad Valenciana", "Andalucía", "Asturias", "Castilla y León", "Extremadura", "Cataluña", "Castilla y León", "Extremadura", "Andalucía", "Cantabria", "Comunidad Valenciana", "Castilla-La Mancha", "Andalucía", "Castilla-La Mancha", "Cataluña", "Andalucía", "Castilla-La Mancha", "País Vasco", "Andalucía", "Aragón", "Andalucía", "Islas Baleares", "Castilla y León", "Galicia", "Canarias", "Cataluña", "La Rioja", "Galicia", "Comunidad de Madrid", "Andalucía", "Comunidad de Murcia", "Comunidad Foral de Navarra", "Galicia", "Castilla y León", "Galicia", "Castilla y León", "Canarias", "Cantabria", "Castilla y León", "Andalucía", "Castilla y León", "Cataluña", "Aragón", "Castilla-La Mancha", "Comunidad Valenciana", "Castilla y León", "País Vasco", "Castilla y León", "Aragón", "Ceuta", "Melilla"))
+
+turismo <- turismo |> 
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia")) 
+
+#Crear porcentaje por CCAA
+porcentaje_turismo_ccaa <- turismo %>%
+  group_by(CCAA) %>%
+  summarize(Porcentaje = sum(PorcentajeTuristicasProvincias) / n()) 
+
+ggplot(porcentaje_turismo_ccaa, aes(x = reorder(CCAA, Porcentaje), y = Porcentaje, fill = Porcentaje)) +
+  geom_bar(stat = "identity", position = "stack", fill = "#3A7EEE") +
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), hjust = -0.2, size = 3) +  # Redondear a 1 decimal
+  labs(title = "Porcentaje de viviendas turísticas por CCAA",
+       y = "Porcentaje",
+       x = "CCAA",
+       fill = "Porcentaje") +
+  theme_minimal() +
+  coord_flip()
 
 ```
+
 Hacer lo mismo pero no por provincias, sino modelo manteniendo las secciones censales y la cantidad de viviendas turísticas. Hay que hacer equivalentes el código de municipio de viviendas21 con la database de turismo, clasificar cada sección por rural o urbana.

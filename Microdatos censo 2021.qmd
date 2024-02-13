@@ -65,7 +65,7 @@ metadatos_limpio <- metadatos2021 |>
 
 ```
 
-##  Recodificaciones
+## Recodificaciones
 
 ```{r}
 microdatos2021_rec <- microdatos2021_limpio |> 
@@ -141,7 +141,7 @@ viviendas21 <- viviendas21 |>
 
 ## Descriptivo de censo 2021
 
-```{r, fig.height=6, fig.width=12} 
+```{r, fig.height=6, fig.width=12}
 # Descriptivos de variables
 a<-ggplot(microdatos2021_rec,mapping=aes(x=SITU, fill = SITU))+geom_bar(aes(y=..count../sum(..count..)))
 b<-ggplot(microdatos2021_rec,mapping=aes(x=SEXO, fill = SEXO))+geom_bar(aes(y=..count../sum(..count..)))
@@ -177,7 +177,7 @@ ggarrange(a,b,
 
     -   Régimen de tenencia x Superficie de vivienda. Las viviendas de alquiler tienden a ser más pequeñas; menos en el caso de las viviendas con la mayor superficie. También son las que menos se conoce la superficie (99 = no consta).
 
-```{r, fig.height=6, fig.width=12} 
+```{r, fig.height=6, fig.width=12}
 #Régimen de tenencia x RURAL, EDAD, SEXO, Superficie vivienda
 a <- ggplot(microdatos2021_rec, aes(x = HABITAT, fill = TENEN_VIV)) +
   geom_bar(position = "fill", color = "white") + theme_minimal()
@@ -204,7 +204,7 @@ ggarrange(a,b,c,d,
 
     -   Rural x Año de construcción. Hay menor proporción de viviendas más recientes en las zonas rurales.
 
-```{r, fig.height=6, fig.width=12} 
+```{r, fig.height=6, fig.width=12}
 #Rural x Superficie, Tipo de edificio, Superficie por ocupante, Nº plantas sobre rasante, Año de construcción
 
 a <- ggplot(microdatos2021_rec, aes(x = SUP_VIV, fill = HABITAT)) +
@@ -263,7 +263,7 @@ microdatos2021_rec <- microdatos2021_rec |>
 
 Con respecto a las provincias, las que tienen mayor proporción de viviendas no principales (por encima del 50% del total) son Ávila, Teruel, Soria, Zamora y Ourense. Esto encaja con ser zonas con muy baja densidad de población y que quizá tienen muchas viviendas sin residentes principales actualmente. Por otra parte, las provincias con menor proporción de viviendas no principales son Gipuzkoa, Madrid, Bizkaia, Melilla y Ceuta. Esto puede deberse al fenómeno contrario, son ciudades con una alta densidad de población que puede indicar que haya menos viviendas no ocupadas, y quizá, una menor oferta disponible de vivienda.
 
-```{r, fig.height=6, fig.width=12} 
+```{r, fig.height=6, fig.width=12}
 # Porcentajes de regimen de tenencia por CCAA
 
 regimen_ccaa <- viviendas21 |> 
@@ -425,6 +425,17 @@ library(pROC)
 #print(matriz_confusion)
 ```
 
+### Modelo linear explotatorio régimen de vivienda
+
+A mayor edad más probabilidad de residir en un régimen de propiedad. Igualmente, más probabilidad si se tiene nacionalidad española.
+
+```{r}
+
+modelo <- lm(TENEN_VIV == 2 ~ VAREDAD + NACIONALIDAD, data = microdatos2021_rec)
+
+summary(modelo)
+```
+
 # Microdatos 2011
 
 ```{r}
@@ -546,7 +557,7 @@ Las variables de la población se analizan al compararlas con el censo de 2021. 
 
 -   Ascensor, accesbilidad, agua caliente central. Más o menos en la misma proporción, la mayoría de edificios cuentan con estos servicios. No se va a desarrollar mucho más estas variables pues desaparecen en el censo de 2021, que serían los datos que nos interesan más.
 
-```{r, fig.height=6, fig.width=12} 
+```{r, fig.height=6, fig.width=12}
 
 #Edad
 a <-ggplot(microdatos2011_limpio,mapping=aes(x=EDAD, fill = EDAD))+geom_bar(aes(y=..count../sum(..count..)))
@@ -609,7 +620,7 @@ Con respecto a las características de las viviendas:
 -   Superficie. La media de la superficie de las viviendas principales es de 90 metros cuadrados en 2021, siendo menor a la media de 2011 (101 m2). La mediana en 2021 es de 78, también menor a 2011. La superficie de las viviendas ahora es más reducida.
 -   Año de construcción.
 
-```{r, fig.height=6, fig.width=12} 
+```{r, fig.height=6, fig.width=12}
 #PERSONAS
 
 #Edad
@@ -721,7 +732,7 @@ viviendas11 <- viviendas11 |>
 
 En general, se observa que son comunidades con menor población o densidad de población. Ya se veía en los datos del censo de 2021 que las comunidades con más viviendas no principales eran estas mismas, por lo cual vemos que se sigue manteniendo esta tendencia. No podemos distinguir sin embargo cómo ha cambiado las viviendas vacías y secundarias específicamente. Parece que la gran cantidad de viviendas no principales en estas comunidades se debe más a la existencia de viviendas secundarias en lugar de vacías.
 
-```{r, fig.height=6, fig.width=12} 
+```{r, fig.height=6, fig.width=12}
 a <- viviendas11 |> 
   group_by(CCAA) |> 
   summarize(PorcentajeViviendasVaciasCCAA = round(mean(PRINCIPAL == "Vacía") * 100, 2)) |> 
@@ -762,7 +773,7 @@ ggarrange(a,b,c,
 
 ```{r}
 
-modelo <- lm(PRINCIPAL == "Vacía" ~ HABITAT, data = viviendas11)
+modelo <- lm(PRINCIPAL == "Vacía" ~ HABITAT + CCAA, data = viviendas11)
 
 summary(modelo)
 
