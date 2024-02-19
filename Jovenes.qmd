@@ -420,7 +420,7 @@ mapa_mun
 
 ### Mapa por provincias
 
-```{r}
+```{r, fig.height=6, fig.width=12}
 # Propiedad 2021
 provic <- esp_get_prov() |> 
   mutate(CPRO = cpro)
@@ -436,6 +436,7 @@ mapa_prop_prov21 <- ggplot(esp_can) +
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
   geom_sf(data = mapa, aes(fill = Propiedad21Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Propiedad21Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
   theme_void() +  
   labs(title = "Probabilidad de propiedad por provincia 2021") +  
   theme(legend.position = c(0.18, 0.55),    
@@ -444,7 +445,7 @@ mapa_prop_prov21 <- ggplot(esp_can) +
         legend.margin = margin(6, 6, 6, 6)) + 
   guides(fill = guide_legend(ncol = 2)) + 
   coord_sf() +
-  scale_fill_gradient2(low = "white", high = "blue", midpoint = 58, breaks = seq(55, 85, by = 10), limits = c(55, 85))
+  scale_fill_viridis_c(option = "C", direction = -1, limits = c(55, 85))
 
 
 # Propiedad 2011
@@ -462,6 +463,8 @@ mapa_prop_prov11 <- ggplot(esp_can) +
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
   geom_sf(data = mapa, aes(fill = Propiedad11Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Propiedad11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+
   theme_void() +  
   labs(title = "Probabilidad de propiedad por provincia 2011") +  
   theme(legend.position = c(0.18, 0.55),    
@@ -470,7 +473,7 @@ mapa_prop_prov11 <- ggplot(esp_can) +
         legend.margin = margin(6, 6, 6, 6)) + 
   guides(fill = guide_legend(ncol = 2)) + 
   coord_sf() +
-  scale_fill_gradient2(low = "white", high = "blue", midpoint = 58, breaks = seq(55, 85, by = 10), limits = c(55, 85))
+  scale_fill_viridis_c(option = "C", direction = -1, limits = c(55, 85))
 
 # Alquiler
 
@@ -488,6 +491,8 @@ mapa_alq_prov21 <- ggplot(esp_can) +
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
   geom_sf(data = mapa, aes(fill = Alquiler21Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Alquiler21Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+
   theme_void() +  
   labs(title = "Probabilidad de alquiler por provincia") +  
   theme(legend.position = c(0.18, 0.55),    
@@ -496,7 +501,7 @@ mapa_alq_prov21 <- ggplot(esp_can) +
         legend.margin = margin(6, 6, 6, 6)) + 
   guides(fill = guide_legend(ncol = 2)) + 
   coord_sf() +
-    scale_fill_gradient(low = "white", high = "blue", limits = c(4, 34))
+  scale_fill_viridis_c(option = "C", direction = -1, limits = c(4, 34))
 
 
 # Alquiler 2011
@@ -515,6 +520,7 @@ mapa_alq_prov11 <- ggplot(esp_can) +
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
   geom_sf(data = mapa, aes(fill = Alquiler11Prov), color = "black", size = 1) + 
+  geom_sf_text(data = mapa, aes(label = round(Alquiler11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
   theme_void() +  
   labs(title = "Probabilidad de alquiler por provincia 2011") +  
   theme(legend.position = c(0.18, 0.55),    
@@ -523,13 +529,12 @@ mapa_alq_prov11 <- ggplot(esp_can) +
         legend.margin = margin(6, 6, 6, 6)) + 
   guides(fill = guide_legend(ncol = 2)) + 
   coord_sf() +
-  scale_fill_gradient(low = "white", high = "blue", limits = c(4, 34))
+  scale_fill_viridis_c(option = "C", direction = -1, limits = c(4, 34))
 
 ggarrange(mapa_prop_prov21, mapa_prop_prov11, mapa_alq_prov21, mapa_alq_prov11,
           nrow=2, ncol=2)
 
 ```
-
 
 ### Variación por provincia de 2011 a 2021
 
@@ -624,7 +629,6 @@ ggarrange(mapa_propiedad_prov, mapa_alquiler_prov, mapa_otro_prov,
 ```
 
 
-
 ## Ver top CCAA con mas propiedad  y alquiler en 2021 y 2011
 
 ```{r}
@@ -714,8 +718,6 @@ top_propiedad_2011
 top_alquiler_2021
 top_alquiler_2011
 
-ggarrange(mapa_propiedad_prov, mapa_alquiler_prov, mapa_otro_prov,
-          ncol = 2, nrow = 2)
 
 ```
 
@@ -738,11 +740,26 @@ top_dif_propiedad
 
 ```
 
-Hay municipios donde sí están comprando más los jóvenes que en 2011, contrariando la tendencia general. Con un máximo de +9%, encontramos Úbeda, un municipio grande en Jaén. Seguido de Nerja en Málaga, Conil de la Frontera, Ronda, Écija, Carmona... También encontramos a Ceuta. Son municipios andaluces que no son las capitales de provincia pero son significativos, ofrecen puestos de trabajo, incluso una universidad en Carmona. Son municipios cercanos a la capital y donde es frecuente que la gente viaje todos los días a ella para trabajar. Podríamos ver por tanto que son municipios en las áreas metropolitanas. Se podría comprobar si ésto se produce por motivos laborales viendo la situación laboral.
+Hay municipios donde sí están comprando más los jóvenes que en 2011, contrariando la tendencia general. Con un máximo de +9%, encontramos Úbeda, un municipio grande en Jaén. Seguido de Nerja en Málaga, Conil de la Frontera, Ronda, Écija, Carmona... También encontramos a Ceuta. Son municipios andaluces que no son las capitales de provincia pero son significativos, ofrecen puestos de trabajo, incluso una universidad en Carmona. Son municipios cercanos a la capital y donde es frecuente que la gente viaje todos los días a ella para trabajar. Podríamos ver por tanto que son municipios en las áreas metropolitanas. Se podría comprobar si ésto se produce por motivos laborales viendo la situación laboral. 
 
 Por otra parte, vemos municipios cuyo nombre desconocemos al tener menos de 20000 habitantes, pertenecientes de nuevo a Andalucía o a Castilla y León, Galicia...
 
 Por otro lado, los municipios donde ahora residen menos los jóvenes en propiedad son de Cataluña, Comunitat Valenciana o País Vasco. Podría analizarse si en Comunitat Valenciana por ejempo se produce más en municipios con más vivienda turística (ej. Benidorm aparece con -17%).
 
+Este aumento es mayor que en el grupo de 'adultos', y no coinciden todos los municipios. El aumento de alquiler en País Vasco, además, es mucho más notable entre jóvenes.
+
+### Modelo exploratorio
+
+Ver si propiedad turistica es relevante para la diferencia de menos propiedad en x provincias/CCAA (?)
+```{r}
+
+turismo <- turismo |> 
+  select(CPRO, PorcentajeTuristicasProvincias)
+
+jovnes_total
+
+modelo <- lm(PropiedadDifProv ~ , data = jovenes_total)
+
+```
 
 
