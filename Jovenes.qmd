@@ -1,0 +1,748 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Noseque
+
+ Base de datos con columnas:
+
+-   \% de viviendas turísticas 
+
+-   Probabilidad jovenes de compra en 2011
+
+-   Probabilidad de jovenes compra en 2021
+
+-   Probabilidad de jovenes alquiler en 2011
+
+-   Probabilidad de jovenes alquiler en 2021
+
+-   Probabilidad de mayores …..
+
+    A nivel de:
+
+-   Municipio
+
+-   Provincia
+
+-   CCAA
+
+Mapa/heat map
+
+Zonas tensionadas
+
+Por qué hay variabilidad?
+
+## Importar datos
+
+```{r}
+
+library(tidyverse)
+library(ggpubr)
+library(ggplot2)
+library(patchwork)
+library(readxl)
+library(haven)
+
+
+load("Microdatos2021/Personas/R/CensoPersonas_2021.RData")
+
+microdatos2021 <- Microdatos
+metadatos2021 <- Metadatos
+
+microdatos2011 <- read_sav("Microdatos2011/Personas/poblacion_2011_v2.sav")
+
+rm(Microdatos, Metadatos)
+```
+
+## Recodificaciones
+
+```{r}
+
+microdatos2021_rec <- microdatos2021 |> 
+  mutate(
+    HABITAT = case_when(
+      CMUN %in% c(991, 992, 993) ~ "Rural",
+      CMUN %in% c(666, 999) ~ NA,
+      TRUE ~ "Urbano"
+    )
+  ) |> 
+  mutate(
+    TENEN_VIV = case_when(
+      TENEN_VIV == 2 ~ "Propiedad",
+      TENEN_VIV == 3 ~ "Alquiler",
+      TENEN_VIV == 4 ~ "Otro"
+    )
+  ) |> 
+  mutate(
+    JOVEN = case_when(
+      VAREDAD >= 18 & VAREDAD < 35 ~ "Joven",
+      VAREDAD >= 35 ~ "Adulto",
+      VAREDAD < 18 ~ "Niño",
+      TRUE ~ NA
+    )
+  )
+
+
+
+## Filtrar microdatos
+
+
+jovenes <- microdatos2021_rec |> 
+  select(CPRO, CMUN, VAREDAD, TENEN_VIV, HABITAT, JOVEN) |>
+      mutate(  
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
+  filter(JOVEN == "Joven")
+
+rm(microdatos2021, metadatos2021)
+```
+
+### CCAA
+
+```{r}
+
+# Añadir CCAA 
+ccaas <- data.frame(
+  CodigoProvincia = c("01", "02", "03", "04", "33", "05", "06", "08", "09", "10", "11", "39", "12", "13", "14", "16", "17", "18", "19", "20", "21", "22", "23", "07", "24", "15", "35", "25", "26", "27", "28", "29", "30", "31", "32", "34", "36", "37",
+"38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52"),
+  
+  CCAA = c("País Vasco", "Castilla-La Mancha", "Comunidad Valenciana", "Andalucía", "Asturias", "Castilla y León", "Extremadura", "Cataluña", "Castilla y León", "Extremadura", "Andalucía", "Cantabria", "Comunidad Valenciana", "Castilla-La Mancha", "Andalucía", "Castilla-La Mancha", "Cataluña", "Andalucía", "Castilla-La Mancha", "País Vasco", "Andalucía", "Aragón", "Andalucía", "Islas Baleares", "Castilla y León", "Galicia", "Canarias", "Cataluña", "La Rioja", "Galicia", "Comunidad de Madrid", "Andalucía", "Comunidad de Murcia", "Comunidad Foral de Navarra", "Galicia", "Castilla y León", "Galicia", "Castilla y León", "Canarias", "Cantabria", "Castilla y León", "Andalucía", "Castilla y León", "Cataluña", "Aragón", "Castilla-La Mancha", "Comunidad Valenciana", "Castilla y León", "País Vasco", "Castilla y León", "Aragón", "Ceuta", "Melilla"))
+
+
+jovenes <- jovenes |> 
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia"))
+```
+
+## Probabilidad compra/alquiler/otros de jóvenes en 2021
+
+```{r}
+
+jovenes <- jovenes |> 
+  select(-VAREDAD)
+
+# Por municipio
+jovenes <- jovenes |> 
+  group_by(cusec) |> 
+  mutate(
+    Propiedad21Mun = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2))
+
+# Por provincia
+
+jovenes <- jovenes |> 
+  group_by(CPRO) |> 
+  mutate(
+    Propiedad21Prov = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21Prov = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21Prov = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2))
+
+# Por CCAA
+
+jovenes <- jovenes |> 
+  group_by(CCAA) |> 
+  mutate(
+    Propiedad21CCAA = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21CCAA = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21CCAA = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2))
+
+
+# Por municipios rurales
+# Esto hace que desaparezcan CPRO 51 y 52
+#jovenes <- jovenes |> 
+#  filter(HABITAT == "Rural") |> 
+#  mutate(
+#    Propiedad21Rural = round((sum(HABITAT == "Rural") / n()) * 100, 2),
+#    Alquiler21Rural = round((sum(HABITAT == "Rural") / n()) * 100, 2),
+#    Otro21Rural = round((sum(HABITAT == "Rural") / n()) * 100, 2))
+
+
+```
+
+Ahora reordenamos y eliminamos algunas variables
+
+```{r}
+
+jovenes <- jovenes |> 
+  select(cusec, CCAA, CPRO, CMUN,  HABITAT, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad21Prov, Alquiler21Prov, Otro21Prov, Propiedad21CCAA, Alquiler21CCAA, Otro21CCAA)
+
+```
+
+
+## Microdatos 2011
+
+```{r}
+
+variables <- c("CPRO", "CMUN", "EDAD", "TENEN")
+
+microdatos2011_limpio <- microdatos2011 |> 
+    select(all_of(variables))
+  
+
+ jovenes11 <- microdatos2011_limpio |> 
+  mutate(
+     HABITAT = case_when(
+       CMUN %in% c(991, 992, 993, 994) ~ "Rural",
+       TRUE ~ "Urbano"))|> 
+  mutate(
+    TENEN_r = case_when(
+      TENEN == 1 ~ "Propiedad",
+      TENEN == 2 ~ "Hipoteca",
+      TENEN == 3 ~ "Herencia o donación",
+      TENEN == 4 ~ "Alquiler",
+      TENEN == 5 ~ "Cedida o a bajo precio",
+      TENEN == 6 ~ "Otro")) |> 
+   mutate(
+     TENEN_VIV = case_when(
+       TENEN_r %in% c("Propiedad", "Hipoteca", "Herencia o donación") ~ "Propiedad",
+       TENEN_r == "Alquiler" ~ "Alquiler",
+       TENEN_r %in% c("Cedida o a bajo precio", "Otro") ~ "Otro")) |> 
+    mutate(
+    JOVEN = case_when(
+      EDAD >= 18 & EDAD < 35 ~ "Joven",
+      EDAD >= 35 ~ "Adulto",
+      EDAD < 18 ~ "Niño",
+      TRUE ~ NA )) |> 
+   mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0")
+   ) |>
+       mutate(
+         CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")
+   ) |> 
+    mutate(  
+    CPRO = trimws(CPRO), #Esto para que no quede espacio tras usar paste
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
+   filter(JOVEN == "Joven")
+ 
+# Se añaden las CCAA 
+jovenes11 <- jovenes11 |> 
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia"))
+```
+
+## Probabilidad compra/alquiler/otros de jóvenes en 2011
+
+```{r}
+
+# Por municipio
+jovenes11 <- jovenes11 |> 
+  group_by(cusec) |> 
+  mutate(
+    Propiedad11Mun = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler11Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro11Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2))
+
+# Por provincia
+jovenes11 <- jovenes11 |> 
+  group_by(CPRO) |> 
+  mutate(
+    Propiedad11Prov = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler11Prov = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro11Prov = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2))
+
+# Por CCAA
+jovenes11 <- jovenes11 |> 
+  group_by(CCAA) |> 
+  mutate(
+    Propiedad11CCAA = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler11CCAA = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro11CCAA = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2))
+
+
+```
+
+## Nombres lugares
+
+```{r}
+# Importar base de datos de vivienda turística porque incluye estos nombres
+# Hay que poner eso de NA porque sino sale un warning muy largo
+locations <- read_excel("vivienda turística/exp_viv_turistica_tabla5_FEB2021.xlsx", sheet = 3, na = "Dato protegido por secreto estadístico.")
+
+nombres_municipios <- locations |> 
+  select(MUN_LITERAL, MUN) |> 
+  rename(cusec = MUN) |> 
+  distinct(cusec, .keep_all = TRUE)
+
+nombres_provincias <- locations |> 
+  select(PROV_LITERAL, PROV) |> 
+  rename(CPRO = PROV) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+```
+
+## Unir ambas tablas con todas las columnas interesantes
+
+Una sola row por cada municipio (cusec).
+En 2011 'censura' el código de identificación de los municipios de 10000 a 20000 habitantes, mientras que en 2021 sólo de los menores de 10000. Al juntar ambas datasets 'se pierde' la identificación de esos municipios de 10 a 20 mil. Pero son muy pocos y no creo que sea muy relevante; de todas formas se podría discernir cuáles son porque también aparece de qué provincia son.
+
+```{r}
+# Añadir nombres municipios y provincias
+jovenes_total <- jovenes |> 
+  left_join(nombres_municipios, by = "cusec", "cusec") |> 
+  left_join(nombres_provincias, by = "CPRO", "CPRO") |> 
+  distinct(cusec, .keep_all = TRUE)
+
+
+# Añadir datos 2011
+# Tiene menos municipios (porque los de 10k a 20k no los especifica)
+jovenes_total <- jovenes11 |>
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(cusec, CCAA, Propiedad11Mun, Alquiler11Mun, Otro11Mun, Propiedad11Prov, Alquiler11Prov, Otro11Prov, Propiedad11CCAA, Alquiler11CCAA, Otro11CCAA) |> 
+  left_join(jovenes_total, by = "cusec", "cusec")
+
+
+#Ordenar
+# Al juntarlos se eliminan los municipios que sí salen en 2021
+jovenes_total <- jovenes_total |> 
+  select(cusec, CCAA.x, CPRO, PROV_LITERAL, CMUN, MUN_LITERAL, HABITAT, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad11Mun, Alquiler11Mun, Otro11Mun, Propiedad21Prov, Alquiler21Prov, Otro21Prov, Propiedad11Prov, Alquiler11Prov, Otro11Prov, Propiedad21CCAA, Alquiler21CCAA, Otro21CCAA, Propiedad11CCAA, Alquiler11CCAA, Otro11CCAA) |> 
+  filter(str_sub(cusec, -3) != "994") 
+```
+
+
+## Diferencia 2011 y 2021
+
+### Por municipio
+
+```{r}
+
+# Propiedad
+jovenes_total <- jovenes_total |> 
+  mutate(
+    PropiedadDifMun = Propiedad21Mun - Propiedad11Mun)
+
+# Alquiler
+jovenes_total <- jovenes_total |> 
+  mutate(
+    AlquilerDifMun = Alquiler21Mun - Alquiler11Mun)
+
+# Otro
+jovenes_total <- jovenes_total |> 
+  mutate(
+    OtroDifProv = Otro21Mun - Otro11Mun)
+
+
+```
+
+
+### Por provincia
+```{r}
+# Propiedad
+
+jovenes_total <- jovenes_total |> 
+  mutate(
+    PropiedadDifProv = Propiedad21Prov - Propiedad11Prov)
+
+# Alquiler
+jovenes_total <- jovenes_total |> 
+  mutate(
+    AlquilerDifProv = Alquiler21Prov - Alquiler11Prov)
+
+# Otro
+jovenes_total <- jovenes_total |> 
+  mutate(
+    OtroDifProv = Otro21Prov - Otro11Prov)
+
+```
+
+## Mapas
+
+### Mapa por mun
+
+```{r}
+library(mapSpain)
+  
+
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+
+munic <-    
+  munic |>  
+  mutate(CMUN = cmun) |> 
+  select(geometry, CMUN)
+
+
+# Mapa por municipios
+# PROPIEDAD
+
+mapa <- jovenes_total |> 
+  select(CCAA.x, CMUN, Propiedad21Mun)
+  
+mapa <- munic |> 
+  left_join(mapa, by = "CMUN")
+  
+mapa_mun <- ggplot(esp_can) +
+    geom_sf() +
+    geom_sf(data = can_prov) +
+    geom_sf(data = can_box) + 
+    geom_sf(data = mapa, aes(fill = Propiedad21Mun), color = "black", size = 1) + 
+    theme_void() +  
+    labs(title = "Probabilidad de compra por municipio") +  
+    theme(legend.position = c(0.18, 0.55),    
+          legend.justification = "center",   
+          legend.background = element_rect(fill = NULL, colour = "black"),
+          legend.margin = margin(6, 6, 6, 6))+ 
+    guides(fill = guide_legend(ncol = 2)) + 
+    coord_sf()
+
+mapa_mun
+
+#ALQUILER
+
+mapa <- jovenes_total |> 
+  select(CCAA.x, CMUN, Alquiler21Mun)
+  
+mapa <- munic |> 
+  left_join(mapa, by = "CMUN")
+  
+mapa_mun <- ggplot(esp_can) +
+    geom_sf() +
+    geom_sf(data = can_prov) +
+    geom_sf(data = can_box) + 
+    geom_sf(data = mapa, aes(fill = Alquiler21Mun), color = "black", size = 1) + 
+  theme_void() +  
+  labs(title = "Probabilidad de alquiler por provincia") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6))+ 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf()
+
+mapa_mun
+
+
+```
+
+### Mapa por provincias
+
+```{r}
+# Propiedad 2021
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- jovenes_total |> 
+  select(CPRO, Propiedad21Prov)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+mapa_prop_prov21 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Propiedad21Prov), color = "black", size = 1) + 
+  theme_void() +  
+  labs(title = "Probabilidad de propiedad por provincia 2021") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "white", high = "blue", midpoint = 58, breaks = seq(55, 85, by = 10), limits = c(55, 85))
+
+
+# Propiedad 2011
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- jovenes_total |> 
+  select(CPRO, Propiedad11Prov)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+mapa_prop_prov11 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Propiedad11Prov), color = "black", size = 1) + 
+  theme_void() +  
+  labs(title = "Probabilidad de propiedad por provincia 2011") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "white", high = "blue", midpoint = 58, breaks = seq(55, 85, by = 10), limits = c(55, 85))
+
+# Alquiler
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- jovenes_total |> 
+  select(CPRO, Alquiler21Prov)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+mapa_alq_prov21 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Alquiler21Prov), color = "black", size = 1) + 
+  theme_void() +  
+  labs(title = "Probabilidad de alquiler por provincia") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+    scale_fill_gradient(low = "white", high = "blue", limits = c(4, 34))
+
+
+# Alquiler 2011
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- jovenes_total |> 
+  select(CPRO, Alquiler11Prov)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+mapa_alq_prov11 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Alquiler11Prov), color = "black", size = 1) + 
+  theme_void() +  
+  labs(title = "Probabilidad de alquiler por provincia 2011") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient(low = "white", high = "blue", limits = c(4, 34))
+
+ggarrange(mapa_prop_prov21, mapa_prop_prov11, mapa_alq_prov21, mapa_alq_prov11,
+          nrow=2, ncol=2)
+
+```
+
+
+### Variación por provincia de 2011 a 2021
+
+```{r}
+# Mapa por provincias PROPIEDAD
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- jovenes_total |> 
+  select(CPRO, PropiedadDifProv)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+  
+mapa_propiedad_prov <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = PropiedadDifProv), color = "black", size = 1) + 
+    geom_sf_text(data = mapa, aes(label = round(PropiedadDifProv, 1)), color = "black", size = 3, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Probabilidad de compra por provincia") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6))+ 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0, limits = c(-16, 5))
+
+# ALQUILER
+
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- jovenes_total |> 
+  select(CPRO, AlquilerDifProv)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+  
+mapa_alquiler_prov <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = AlquilerDifProv), color = "black", size = 1) + 
+  geom_sf_text(data = mapa, aes(label = round(AlquilerDifProv, 1)), color = "black", size = 3, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Probabilidad de alquiler por provincia") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0, limits = c(-2, 17))
+
+
+# OTRO
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- jovenes_total |> 
+  select(CPRO, OtroDifProv)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+  
+mapa_otro_prov <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = OtroDifProv), color = "black", size = 1) + 
+    geom_sf_text(data = mapa, aes(label = round(OtroDifProv, 1)), color = "black", size = 3, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+
+  theme_void() +  
+  labs(title = "Probabilidad de otro por provincia") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6))+ 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0, limits = c(-5, 5))
+
+ggarrange(mapa_propiedad_prov, mapa_alquiler_prov, mapa_otro_prov,
+          ncol = 2, nrow = 2)
+
+```
+
+
+
+## Ver top CCAA con mas propiedad  y alquiler en 2021 y 2011
+
+```{r}
+# Top CCAA con más propiedad en 2021
+top_propiedad_2021 <- jovenes_total %>%
+  arrange(desc(Propiedad21CCAA)) %>%
+  distinct(Propiedad21CCAA, .keep_all = TRUE) |> 
+  select(Propiedad21CCAA, CCAA.x)
+
+top_propiedad_2021
+
+# Top CCAA con más alquiler en 2021
+top_alquiler_2021 <- jovenes_total %>%
+  arrange(desc(Alquiler21CCAA)) %>%
+    distinct(Alquiler21CCAA, .keep_all = TRUE) |> 
+    select(Alquiler21CCAA, CCAA.x)
+
+top_alquiler_2021
+
+# Top CCAA con más propiedad en 2011
+top_propiedad_2011 <- jovenes_total %>%
+  arrange(desc(Propiedad11CCAA)) %>%
+    distinct(Propiedad11CCAA, .keep_all = TRUE) |> 
+    select(Propiedad11CCAA, CCAA.x)
+
+top_propiedad_2011
+
+# Top CCCAA con más alquiler en 2011
+top_alquiler_2011 <- jovenes_total %>%
+    distinct(Alquiler11CCAA, .keep_all = TRUE) |> 
+  arrange(desc(Alquiler11CCAA)) %>%
+    select(Alquiler11CCAA, CCAA.x)
+
+
+top_propiedad_2021
+top_propiedad_2011
+top_alquiler_2021
+top_alquiler_2011
+
+```
+
+Las CCAA con más propiedad entre jóvenes en 2011 son País Vasco (83,12%), Comunidad Valenciana, Navarra, Murcia y Andalucía. Sin embargo, en 2021 éstas son Andalucía con un máximo de 77.31%, seguido de Extremadura, Castilla-La Mancha, Castilla  y León y Comunidad de Murcia. 
+
+Esto muestra que ha habido un descenso generalizado de la propiedad en toda España, pero éste no ha sido homogéneo. Andalucía, por ejemplo, sólo pierde un 4%; mientras que País Vasco experimenta un descenso del 12%. 
+
+Con respecto a los valores más bajos de propiedad en 2011, éstos eran CCAA pequeñas como las islas y Ceuta y Melilla, así como Cataluña y Madrid. Esta tendencia sí se mantiene en 2021, salvo Ceuta, que pasa a tener más porcentaje de propiedad y sale de las CCAA más bajas.
+
+Alquiler. El alquiler sobresalía en 2011 en las CCAA de Melilla, Baleares, Cataluña, Madrid. En 2021, si bien Melilla sigue encabezando la lista, ha entrado entre las CCAA con mayor alquiler País Vasco, que parece ser el caso más dramático, Aragón o Comunitat Valenciana Además, en las CCAA con poca proproción de alquiler, éste ha aumentado pero poco; y cuanto más alquiler en 2011, más ha aumentado para 2021. T
+
+### Provincias
+
+```{r}
+
+# Top CCAA con más propiedad en 2021
+top_propiedad_2021 <- jovenes_total %>%
+  arrange(desc(Propiedad21Prov)) %>%
+  distinct(Propiedad21Prov, .keep_all = TRUE) |> 
+  select(Propiedad21Prov, PROV_LITERAL)
+
+top_propiedad_2021
+
+# Top CCAA con más alquiler en 2021
+top_alquiler_2021 <- jovenes_total %>%
+  arrange(desc(Alquiler21Prov)) %>%
+    distinct(Alquiler21Prov, .keep_all = TRUE) |> 
+    select(Alquiler21Prov, PROV_LITERAL)
+
+top_alquiler_2021
+
+# Top CCAA con más propiedad en 2011
+top_propiedad_2011 <- jovenes_total %>%
+  arrange(desc(Propiedad11Prov)) %>%
+    distinct(Propiedad11Prov, .keep_all = TRUE) |> 
+    select(Propiedad11Prov, PROV_LITERAL)
+
+top_propiedad_2011
+
+# Top CCCAA con más alquiler en 2011
+top_alquiler_2011 <- jovenes_total %>%
+    distinct(Alquiler11Prov, .keep_all = TRUE) |> 
+  arrange(desc(Alquiler11Prov)) %>%
+    select(Alquiler11Prov, PROV_LITERAL)
+
+
+top_propiedad_2021
+top_propiedad_2011
+top_alquiler_2021
+top_alquiler_2011
+
+ggarrange(mapa_propiedad_prov, mapa_alquiler_prov, mapa_otro_prov,
+          ncol = 2, nrow = 2)
+
+```
+
+Provincias como Barcelona han perdido un 15% de propiedad, así como Álava y en general la Comunitat Valenciana, como veíamos antes. 
+
+A primera vista, no parece que la proporción de vivienda turística explique totalmente la menor propiedad. Algunos casos como el de la Comunitat Valenciana, las islas o Cataluña (especialmente Barcelona) podrían relacionarse con esto. Pero en casos como la provincia de Málaga que tiene una cantidad enorme de vivienda turística, no se ve este descenso de propiedad; o en casos como el País Vasco y Zaragoza, hay gran descenso de propiedad pero no hay mucho turismo. 
+
+Las únicas provincias con más propiedad en 2021 que en 2011 son Jaén, Cáceres y Teruel, aunque con una variación muy pequeña. Son ciudades con menos población joven (y población en general).
+
+
+### Por municipios
+```{r}
+
+top_dif_propiedad <- jovenes_total %>%
+    distinct(PropiedadDifMun, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifMun)) %>%
+    select(PropiedadDifMun, CCAA.x, PROV_LITERAL, MUN_LITERAL, CMUN)
+
+top_dif_propiedad
+
+```
+
+Hay municipios donde sí están comprando más los jóvenes que en 2011, contrariando la tendencia general. Con un máximo de +9%, encontramos Úbeda, un municipio grande en Jaén. Seguido de Nerja en Málaga, Conil de la Frontera, Ronda, Écija, Carmona... También encontramos a Ceuta. Son municipios andaluces que no son las capitales de provincia pero son significativos, ofrecen puestos de trabajo, incluso una universidad en Carmona. Son municipios cercanos a la capital y donde es frecuente que la gente viaje todos los días a ella para trabajar. Podríamos ver por tanto que son municipios en las áreas metropolitanas. Se podría comprobar si ésto se produce por motivos laborales viendo la situación laboral.
+
+Por otra parte, vemos municipios cuyo nombre desconocemos al tener menos de 20000 habitantes, pertenecientes de nuevo a Andalucía o a Castilla y León, Galicia...
+
+Por otro lado, los municipios donde ahora residen menos los jóvenes en propiedad son de Cataluña, Comunitat Valenciana o País Vasco. Podría analizarse si en Comunitat Valenciana por ejempo se produce más en municipios con más vivienda turística (ej. Benidorm aparece con -17%).
+
+
+
