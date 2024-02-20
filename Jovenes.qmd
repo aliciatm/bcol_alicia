@@ -114,6 +114,7 @@ ccaas <- data.frame(
 
 jovenes <- jovenes |> 
   left_join(ccaas, by = c("CPRO" = "CodigoProvincia"))
+
 ```
 
 ## Probabilidad compra/alquiler/otros de jóvenes en 2021
@@ -538,7 +539,7 @@ ggarrange(mapa_prop_prov21, mapa_prop_prov11, mapa_alq_prov21, mapa_alq_prov11,
 
 ### Variación por provincia de 2011 a 2021
 
-```{r}
+```{r, fig.height=6, fig.width=12}
 # Mapa por provincias PROPIEDAD
 
 provic <- esp_get_prov() |> 
@@ -631,7 +632,7 @@ ggarrange(mapa_propiedad_prov, mapa_alquiler_prov, mapa_otro_prov,
 
 ## Ver top CCAA con mas propiedad  y alquiler en 2021 y 2011
 
-```{r}
+```{r, fig.height=6, fig.width=12}
 # Top CCAA con más propiedad en 2021
 top_propiedad_2021 <- jovenes_total %>%
   arrange(desc(Propiedad21CCAA)) %>%
@@ -667,6 +668,36 @@ top_propiedad_2021
 top_propiedad_2011
 top_alquiler_2021
 top_alquiler_2011
+
+
+# Visualizar las cuatro tablas en cuatro gráficos de barras horizontales
+plot_propiedad_2021 <- ggplot(jovenes_total, aes(x = reorder(CCAA.x, Propiedad21CCAA), y = Propiedad21CCAA)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Top CCAA con más propiedad en 2021", x = "CCAA", y = "Proporción de propiedad") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_alquiler_2021 <- ggplot(jovenes_total, aes(x = reorder(CCAA.x, Alquiler21CCAA), y = Alquiler21CCAA)) +
+  geom_bar(stat = "identity", fill = "salmon") +
+  labs(title = "Top CCAA con más alquiler en 2021", x = "CCAA", y = "Proporción de alquiler") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_propiedad_2011 <- ggplot(jovenes_total, aes(x = reorder(CCAA.x, Propiedad11CCAA), y = Propiedad11CCAA)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Top CCAA con más propiedad en 2011", x = "CCAA", y = "Proporción de propiedad") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_alquiler_2011 <- ggplot(jovenes_total, aes(x = reorder(CCAA.x, Alquiler11CCAA), y = Alquiler11CCAA)) +
+  geom_bar(stat = "identity", fill = "salmon") +
+  labs(title = "Top CCAA con más alquiler en 2011", x = "CCAA", y = "Proporción de alquiler") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Mostrar los gráficos
+ggarrange(plot_propiedad_2021, plot_alquiler_2021, plot_propiedad_2011, plot_alquiler_2011, nrow = 2, ncol = 2)
+
 
 ```
 
@@ -736,7 +767,7 @@ top_dif_propiedad <- jovenes_total %>%
   arrange(desc(PropiedadDifMun)) %>%
     select(PropiedadDifMun, CCAA.x, PROV_LITERAL, MUN_LITERAL, CMUN)
 
-top_dif_propiedad
+View(top_dif_propiedad)
 
 ```
 
@@ -748,18 +779,5 @@ Por otro lado, los municipios donde ahora residen menos los jóvenes en propieda
 
 Este aumento es mayor que en el grupo de 'adultos', y no coinciden todos los municipios. El aumento de alquiler en País Vasco, además, es mucho más notable entre jóvenes.
 
-### Modelo exploratorio
-
-Ver si propiedad turistica es relevante para la diferencia de menos propiedad en x provincias/CCAA (?)
-```{r}
-
-turismo <- turismo |> 
-  select(CPRO, PorcentajeTuristicasProvincias)
-
-jovnes_total
-
-modelo <- lm(PropiedadDifProv ~ , data = jovenes_total)
-
-```
 
 
