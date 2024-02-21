@@ -4,35 +4,6 @@ format: html
 editor: visual
 ---
 
-## Noseque
-
- Base de datos con columnas:
-
--   \% de viviendas turísticas 
-
--   Probabilidad jovenes de compra en 2011
-
--   Probabilidad de jovenes compra en 2021
-
--   Probabilidad de jovenes alquiler en 2011
-
--   Probabilidad de jovenes alquiler en 2021
-
--   Probabilidad de mayores …..
-
-    A nivel de:
-
--   Municipio
-
--   Provincia
-
--   CCAA
-
-Mapa/heat map
-
-Zonas tensionadas
-
-Por qué hay variabilidad?
 
 ## Importar datos
 
