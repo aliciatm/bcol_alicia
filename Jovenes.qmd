@@ -4,7 +4,6 @@ format: html
 editor: visual
 ---
 
-
 ## Importar datos
 
 ```{r}
@@ -68,7 +67,7 @@ jovenes <- microdatos2021_rec |>
     cusec = paste0(CPRO, CMUN)) |> 
   filter(JOVEN == "Joven")
 
-rm(microdatos2021, metadatos2021)
+rm(metadatos2021)
 ```
 
 ### CCAA
@@ -143,7 +142,6 @@ jovenes <- jovenes |>
 
 ```
 
-
 ## Microdatos 2011
 
 ```{r}
@@ -179,11 +177,8 @@ microdatos2011_limpio <- microdatos2011 |>
       EDAD < 18 ~ "Niño",
       TRUE ~ NA )) |> 
    mutate(
-    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0")
-   ) |>
-       mutate(
-         CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")
-   ) |> 
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
     mutate(  
     CPRO = trimws(CPRO), #Esto para que no quede espacio tras usar paste
     CMUN = trimws(CMUN),
@@ -247,8 +242,7 @@ nombres_provincias <- locations |>
 
 ## Unir ambas tablas con todas las columnas interesantes
 
-Una sola row por cada municipio (cusec).
-En 2011 'censura' el código de identificación de los municipios de 10000 a 20000 habitantes, mientras que en 2021 sólo de los menores de 10000. Al juntar ambas datasets 'se pierde' la identificación de esos municipios de 10 a 20 mil. Pero son muy pocos y no creo que sea muy relevante; de todas formas se podría discernir cuáles son porque también aparece de qué provincia son.
+Una sola row por cada municipio (cusec). En 2011 'censura' el código de identificación de los municipios de 10000 a 20000 habitantes, mientras que en 2021 sólo de los menores de 10000. Al juntar ambas datasets 'se pierde' la identificación de esos municipios de 10 a 20 mil. Pero son muy pocos y no creo que sea muy relevante; de todas formas se podría discernir cuáles son porque también aparece de qué provincia son.
 
 ```{r}
 # Añadir nombres municipios y provincias
@@ -272,7 +266,6 @@ jovenes_total <- jovenes_total |>
   select(cusec, CCAA.x, CPRO, PROV_LITERAL, CMUN, MUN_LITERAL, HABITAT, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad11Mun, Alquiler11Mun, Otro11Mun, Propiedad21Prov, Alquiler21Prov, Otro21Prov, Propiedad11Prov, Alquiler11Prov, Otro11Prov, Propiedad21CCAA, Alquiler21CCAA, Otro21CCAA, Propiedad11CCAA, Alquiler11CCAA, Otro11CCAA) |> 
   filter(str_sub(cusec, -3) != "994") 
 ```
-
 
 ## Diferencia 2011 y 2021
 
@@ -298,8 +291,8 @@ jovenes_total <- jovenes_total |>
 
 ```
 
-
 ### Por provincia
+
 ```{r}
 # Propiedad
 
@@ -326,7 +319,6 @@ jovenes_total <- jovenes_total |>
 ```{r}
 library(mapSpain)
   
-
 esp_can <- esp_get_country() 
 can_prov <- esp_get_can_provinces()
 can_box <- esp_get_can_box() 
@@ -334,18 +326,18 @@ munic <- esp_get_munic()
 
 munic <-    
   munic |>  
-  mutate(CMUN = cmun) |> 
-  select(geometry, CMUN)
+  mutate(cusec = cmun) |> 
+  select(geometry, cusec)
 
 
 # Mapa por municipios
 # PROPIEDAD
 
 mapa <- jovenes_total |> 
-  select(CCAA.x, CMUN, Propiedad21Mun)
+  select(CCAA.x, cusec, Propiedad21Mun)
   
 mapa <- munic |> 
-  left_join(mapa, by = "CMUN")
+  left_join(mapa, by = "cusec")
   
 mapa_mun <- ggplot(esp_can) +
     geom_sf() +
@@ -366,10 +358,10 @@ mapa_mun
 #ALQUILER
 
 mapa <- jovenes_total |> 
-  select(CCAA.x, CMUN, Alquiler21Mun)
+  select(CCAA.x, cusec, Alquiler21Mun)
   
 mapa <- munic |> 
-  left_join(mapa, by = "CMUN")
+  left_join(mapa, by = "cusec")
   
 mapa_mun <- ggplot(esp_can) +
     geom_sf() +
@@ -600,8 +592,7 @@ ggarrange(mapa_propiedad_prov, mapa_alquiler_prov, mapa_otro_prov,
 
 ```
 
-
-## Ver top CCAA con mas propiedad  y alquiler en 2021 y 2011
+## Ver top CCAA con mas propiedad y alquiler en 2021 y 2011
 
 ```{r, fig.height=6, fig.width=12}
 # Top CCAA con más propiedad en 2021
@@ -672,9 +663,9 @@ ggarrange(plot_propiedad_2021, plot_alquiler_2021, plot_propiedad_2011, plot_alq
 
 ```
 
-Las CCAA con más propiedad entre jóvenes en 2011 son País Vasco (83,12%), Comunidad Valenciana, Navarra, Murcia y Andalucía. Sin embargo, en 2021 éstas son Andalucía con un máximo de 77.31%, seguido de Extremadura, Castilla-La Mancha, Castilla  y León y Comunidad de Murcia. 
+Las CCAA con más propiedad entre jóvenes en 2011 son País Vasco (83,12%), Comunidad Valenciana, Navarra, Murcia y Andalucía. Sin embargo, en 2021 éstas son Andalucía con un máximo de 77.31%, seguido de Extremadura, Castilla-La Mancha, Castilla y León y Comunidad de Murcia.
 
-Esto muestra que ha habido un descenso generalizado de la propiedad en toda España, pero éste no ha sido homogéneo. Andalucía, por ejemplo, sólo pierde un 4%; mientras que País Vasco experimenta un descenso del 12%. 
+Esto muestra que ha habido un descenso generalizado de la propiedad en toda España, pero éste no ha sido homogéneo. Andalucía, por ejemplo, sólo pierde un 4%; mientras que País Vasco experimenta un descenso del 12%.
 
 Con respecto a los valores más bajos de propiedad en 2011, éstos eran CCAA pequeñas como las islas y Ceuta y Melilla, así como Cataluña y Madrid. Esta tendencia sí se mantiene en 2021, salvo Ceuta, que pasa a tener más porcentaje de propiedad y sale de las CCAA más bajas.
 
@@ -723,14 +714,14 @@ top_alquiler_2011
 
 ```
 
-Provincias como Barcelona han perdido un 15% de propiedad, así como Álava y en general la Comunitat Valenciana, como veíamos antes. 
+Provincias como Barcelona han perdido un 15% de propiedad, así como Álava y en general la Comunitat Valenciana, como veíamos antes.
 
-A primera vista, no parece que la proporción de vivienda turística explique totalmente la menor propiedad. Algunos casos como el de la Comunitat Valenciana, las islas o Cataluña (especialmente Barcelona) podrían relacionarse con esto. Pero en casos como la provincia de Málaga que tiene una cantidad enorme de vivienda turística, no se ve este descenso de propiedad; o en casos como el País Vasco y Zaragoza, hay gran descenso de propiedad pero no hay mucho turismo. 
+A primera vista, no parece que la proporción de vivienda turística explique totalmente la menor propiedad. Algunos casos como el de la Comunitat Valenciana, las islas o Cataluña (especialmente Barcelona) podrían relacionarse con esto. Pero en casos como la provincia de Málaga que tiene una cantidad enorme de vivienda turística, no se ve este descenso de propiedad; o en casos como el País Vasco y Zaragoza, hay gran descenso de propiedad pero no hay mucho turismo.
 
 Las únicas provincias con más propiedad en 2021 que en 2011 son Jaén, Cáceres y Teruel, aunque con una variación muy pequeña. Son ciudades con menos población joven (y población en general).
 
-
 ### Por municipios
+
 ```{r}
 
 top_dif_propiedad <- jovenes_total %>%
@@ -738,11 +729,9 @@ top_dif_propiedad <- jovenes_total %>%
   arrange(desc(PropiedadDifMun)) %>%
     select(PropiedadDifMun, CCAA.x, PROV_LITERAL, MUN_LITERAL, CMUN)
 
-View(top_dif_propiedad)
-
 ```
 
-Hay municipios donde sí están comprando más los jóvenes que en 2011, contrariando la tendencia general. Con un máximo de +9%, encontramos Úbeda, un municipio grande en Jaén. Seguido de Nerja en Málaga, Conil de la Frontera, Ronda, Écija, Carmona... También encontramos a Ceuta. Son municipios andaluces que no son las capitales de provincia pero son significativos, ofrecen puestos de trabajo, incluso una universidad en Carmona. Son municipios cercanos a la capital y donde es frecuente que la gente viaje todos los días a ella para trabajar. Podríamos ver por tanto que son municipios en las áreas metropolitanas. Se podría comprobar si ésto se produce por motivos laborales viendo la situación laboral. 
+Hay municipios donde sí están comprando más los jóvenes que en 2011, contrariando la tendencia general. Con un máximo de +9%, encontramos Úbeda, un municipio grande en Jaén. Seguido de Nerja en Málaga, Conil de la Frontera, Ronda, Écija, Carmona... También encontramos a Ceuta. Son municipios andaluces que no son las capitales de provincia pero son significativos, ofrecen puestos de trabajo, incluso una universidad en Carmona. Son municipios cercanos a la capital y donde es frecuente que la gente viaje todos los días a ella para trabajar. Podríamos ver por tanto que son municipios en las áreas metropolitanas. Se podría comprobar si ésto se produce por motivos laborales viendo la situación laboral.
 
 Por otra parte, vemos municipios cuyo nombre desconocemos al tener menos de 20000 habitantes, pertenecientes de nuevo a Andalucía o a Castilla y León, Galicia...
 
@@ -750,5 +739,266 @@ Por otro lado, los municipios donde ahora residen menos los jóvenes en propieda
 
 Este aumento es mayor que en el grupo de 'adultos', y no coinciden todos los municipios. El aumento de alquiler en País Vasco, además, es mucho más notable entre jóvenes.
 
+# Propiedad por compra de jóvenes en 2011
 
+Un 38.59% de los jóvenes en 2011 tenían un régimen de vivienda de 'hipoteca', siendo el régimen de tenencia más frecuente seguido de 'propiedad'. Sólo un 12.87% vivían de alquiler. La edad media de los jóvenes con hipoteca era un año superior a la población joven general.
+
+```{r}
+
+ggplot(jovenes11,mapping=aes(x=TENEN_r, fill = TENEN_r))+geom_bar(aes(y=..count../sum(..count..)))
+
+(sum(jovenes11$TENEN_r == "Hipoteca") / nrow(jovenes11)) * 100
+(sum(jovenes11$TENEN_r == "Alquiler") / nrow(jovenes11)) * 100
+
+hipotecados <- jovenes11 |> 
+  filter(TENEN_r == "Hipoteca")
+
+# Edad media
+mean(jovenes11$EDAD)
+mean(hipotecados$EDAD)
+
+
+# Por municipio
+jovenes11 <- jovenes11 |> 
+  group_by(cusec) |> 
+  mutate(
+    Hipoteca11Mun = round((sum(TENEN_r == "Hipoteca") / n()) * 100, 2))
+
+hipotecas <- jovenes11 |> 
+  select(cusec,Hipoteca11Mun) |> 
+  distinct(cusec, .keep_all = TRUE)
+
+jovenes_total <- jovenes_total |> 
+  left_join(hipotecas, by = "cusec")
+
+
+jovenes_total |> 
+  arrange(desc(Hipoteca11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(PROV_LITERAL, MUN_LITERAL, Hipoteca11Mun)
+
+```
+
+# Definiendo a los jóvenes que compran
+
+Joven de 18 a 35 años que no viva con los padres (ni otro fammiliar), viva en tenencia de 'compra'
+
+-   Buscar variables (2011 y 2021)
+-   Comparar jóvenes que compran según encuesta CIS 2010
+
+## En 2011
+
+Puede ser hipoteca heredada.
+
+```{r}
+
+compra11 <- microdatos2011 |> 
+  select(CPRO, CMUN, EDAD, ANAC, NORDEN, ANORES, ANOM, LTRABA, MUNTRABA, TENEN, CON_NORDEN, OPA_NORDEN, TIPOPER, ESTHOG, EDADPAD, EDADMAD) 
+
+compra11 <- compra11 |> 
+  filter(EDAD %in% c(18:35), # Jóvenes
+         TENEN %in% c(1, 2), # Que viven en una casa comprada
+         TIPOPER != "H", # Que no son hijos en el núcleo
+         is.na(EDADPAD), # Que no conviven con el padre
+         is.na(EDADMAD)) |> # Que no conviven con la madre 
+    select(-EDADPAD, -EDADMAD) 
+
+compra11 <- compra11 |> 
+  mutate(mayor = ifelse(ANORES - ANAC > 18, TRUE, FALSE)) |> 
+  filter(mayor == TRUE) # Que era mayor de edad en la última mudanza
+  
+```
+
+Añadir nombres municipios/provincias
+
+```{r}
+
+# Crear los códigos cusec de los municipios no especificados
+cusec_991 <- sprintf("%05d", seq(1991, 52991, by = 1000))
+cusec_992 <- sprintf("%05d", seq(1992, 52992, by = 1000))
+cusec_993 <- sprintf("%05d", seq(1993, 52993, by = 1000))
+cusec_994 <- sprintf("%05d", seq(1994, 52994, by = 1000))
+cusec <- c(cusec_991, cusec_992, cusec_993, cusec_994)
+
+MUN_LITERAL <- 
+  ifelse(substr(cusec, 4, 5) == "91","<=2000",
+  ifelse(substr(cusec, 4, 5) == "92", "2001 <= 5000",
+  ifelse(substr(cusec, 4, 5) == "93", "5001 <= 10000",
+  ifelse(substr(cusec, 4, 5) == "94", "10001 <= 20000","Otros"))))
+
+df_rural <- data.frame(MUN_LITERAL, cusec)
+  
+nombres_municipios <- rbind(nombres_municipios, df_rural)
+  
+#Añado id para evitar duplicados
+compra11 <- compra11 |> 
+  mutate(id = row_number())
+
+
+# Añadir nombres de provincias y municipios
+compra11 <- compra11 |> 
+  mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
+   mutate(  
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
+  
+  left_join(nombres_municipios, by = "cusec") |> 
+  left_join(nombres_provincias, by = "CPRO") |> 
+  
+  distinct(id, .keep_all = T)
+  
+```
+
+
+## En 2021
+
+Hay limitaciones, porque no puedo retirar exactamente que NO sean herencia.
+
+
+```{r}
+
+compra21 <- microdatos2021 |> 
+  select(CPRO, CMUN, VAREDAD, ANAC, TENEN_VIV, NORDEN, RESI_NACIM, VARANORES, VARANOM, CMUN_ANT, CMUN_UNANO, RESI_UNANO, CMUN_DANO, RESI_DANO, LTRAB, CMUN_TRAB, LEST, CMUN_EST, NORDEN_PAD, NORDEN_MAD, NORDEN_CON, NORDEN_OPA, TIPOPER, SEXO_MAD, SEXO_PAD, ESTRUC_HOG) 
+
+compra21 <- compra21 |> 
+  filter(VAREDAD %in% c(18:35), # Jóvenes
+         TENEN_VIV == 2, # Que viven en propiedad
+         TIPOPER != "H", # Que no son hijos en el núcleo
+         SEXO_PAD == "N", # Que no conviven con el padre
+         SEXO_MAD == "N") |>  # Que no conviven con la madre
+  mutate(ESTRUC_HOG = as.numeric(ESTRUC_HOG)) |> 
+  filter(ESTRUC_HOG %in% c(01, 02, 05, 07, 08, 10, 11)) # No es un hogar con una persona sola de +65 años ni hijos de más de 25
+
+# Filtrar para haberse mudado a otra vivienda con mínimo 18 años, en una forma amplia
+
+compra21 <- compra21 |> 
+  mutate(
+    VARANORES_r = case_when(
+      VARANORES == "0005" ~ as.numeric(2015),
+      VARANORES == "0004" ~ as.numeric(2010),
+      VARANORES %in% c("9999", "0003") ~ as.numeric(2000), 
+      VARANORES == " " ~ NA,
+      TRUE ~ as.numeric(VARANORES)),
+      ANAC = as.numeric(ANAC),
+      mayor = ifelse(VARANORES_r - ANAC > 18, TRUE, FALSE)) |> 
+  filter(mayor == TRUE)
+
+
+```
+
+Añadir nombres
+
+```{r}
+
+#Añado id para evitar duplicados
+compra21 <- compra21 |> 
+  mutate(id = row_number())
+
+
+compra21 <- compra21 |> 
+  mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
+   mutate(  
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
+  
+  left_join(nombres_municipios, by = "cusec") |> 
+  left_join(nombres_provincias, by = "CPRO") |> 
+  
+  distinct(id, .keep_all = T)
+
+```
+
+## Descriptivo
+
+Hay menos jóvenes con las condiciones especificadas en 2021 que en 2011. La media de edad en 2011 es de 31,1, en 2021 es de 30,35.
+
+
+Desccriptivo:
+- Edad media
+- Norden
+- ... todas las variables
+
+- Ver en un mapa
+```{r}
+
+table(compra21$NORDEN)
+
+(prop.table(table(compra11$NORDEN)) * 100)
+
+```
+
+## Dónde compran en 2011
+### Por municipios
+
+```{r}
+
+compra11 <- compra11 |> 
+  group_by(cusec) |>  
+  mutate(PoblacionMunicipios = n()) |> 
+  ungroup() |> 
+  mutate(PorcentajeMunicipios = (PoblacionMunicipios / n()) * 100)
+
+compra11 |> 
+    distinct(cusec, .keep_all = TRUE) |> 
+  arrange(desc(PorcentajeMunicipios)) |> 
+    select(PorcentajeMunicipios, MUN_LITERAL, PROV_LITERAL)
+
+
+```
+
+
+### Por provincias
+
+```{r}
+
+compra11 <- compra11 |> 
+  group_by(CPRO) |>  
+  mutate(PoblacionProvincias = n()) |> 
+  ungroup() |> 
+  mutate(PorcentajeProvincias = (PoblacionProvincias / n()) * 100)
+
+# Visualizar los resultados
+
+library(mapSpain)
+  
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+
+munic <-    
+  munic |>  
+  mutate(cusec = cmun) |> 
+  select(geometry, cusec)
+
+# Mapa por provincias
+
+mapa <- compra11 |> 
+  select(cusec, PoblacionMunicipios, PorcentajeMunicipios)
+  
+mapa <- mapa |> 
+  left_join(munic, by = "cusec")
+  
+ggplot(esp_can) +
+    geom_sf() +
+    geom_sf(data = can_prov) +
+    geom_sf(data = can_box) + 
+    geom_sf(data = mapa, aes(fill = PoblacionMunicipios), color = "black", size = 1) + 
+    theme_void() +  
+    labs(title = "Probabilidad de compra por municipio") +  
+    theme(legend.position = c(0.18, 0.55),    
+          legend.justification = "center",   
+          legend.background = element_rect(fill = NULL, colour = "black"),
+          legend.margin = margin(6, 6, 6, 6))+ 
+    guides(fill = guide_legend(ncol = 2)) + 
+    coord_sf()
+
+
+```
 
