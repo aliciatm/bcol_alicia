@@ -1343,6 +1343,8 @@ ggarrange(p1, p3, p4, ncol=2, nrow = 2)
 
 ### Provincias
 
+- 2021 con filtro. La provincia 
+
 ```{r}
 
 # Top provincias con más propiedad en 2021
@@ -1359,13 +1361,11 @@ top_propiedad_2021 <- jovenes_total %>%
   select(Propiedad21Prov, PROV_LITERAL)
 
 
-
-
 # Top provincias con más propiedad en 2011
 top_propiedad_2011_filtro <- compra11 %>%
-  arrange(desc(Propiedad21Prov)) %>%
-  distinct(Propiedad21Prov, .keep_all = TRUE) |> 
-  select(Propiedad21Prov, PROV_LITERAL)
+  arrange(desc(Compra11Prov)) %>%
+  distinct(Compra11Prov, .keep_all = TRUE) |> 
+  select(Compra11Prov, PROV_LITERAL)
 
 
 # Top CCAA con más propiedad en 2011 NO FILTRO
@@ -1374,7 +1374,6 @@ top_propiedad_2011 <- jovenes_total %>%
     distinct(Propiedad11Prov, .keep_all = TRUE) |> 
     select(Propiedad11Prov, PROV_LITERAL)
 
-top_propiedad_2011
 
 # Top provincias con más compra en 2011
 top_compra_2011 <- compra11 %>%
@@ -1407,9 +1406,9 @@ top_propiedad_2021 <- jovenes_total %>%
 
 # Top municipios con más propiedad en 2011
 top_propiedad_2011 <- compra11 %>%
-  arrange(desc(Propiedad11Mun)) %>%
-  distinct(Propiedad11Mun, .keep_all = TRUE) |> 
-  select(Propiedad11Mun, PROV_LITERAL)
+  arrange(desc(Compra11Mun)) %>%
+  distinct(Compra11Mun, .keep_all = TRUE) |> 
+  select(Compra11Mun, PROV_LITERAL)
 
 # Top municipios con más propiedad en 2011 NO FILTRO
 top_propiedad_2011 <- jovenes_total %>%
@@ -1439,15 +1438,112 @@ top_compra_2011
 ```
 
 
+## Diferencia entre años
 
+Juntar tablas
+```{r}
+
+compra11_mun <- compra11 |> 
+  distinct(cusec, .keep_all=T)
+
+compra21_mun <- compra21 |> 
+  distinct(cusec, .keep_all=T)
+
+compra_total_mun <- compra11_mun |> 
+  left_join(compra21_mun, by = "cusec") |> 
+    rename_with(~str_replace(., "\\.y$", ""), .cols = ends_with(".y")) |>
+  select(-ends_with(".x")) |> 
+  distinct(cusec, .keep_all=T)
+  
+
+```
+
+
+
+### Por municipio
 
 ```{r}
+
+# Propiedad
+compra_total_mun <- compra_total_mun |> 
+  mutate(
+    PropiedadDifMun = Propiedad21Mun - Compra11Mun)
+
+compra_total_mun %>%
+    distinct(PropiedadDifMun, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifMun)) %>%
+    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CMUN)
+
+# Alquiler
+compra_total_mun <- compra_total_mun |> 
+  mutate(
+    AlquilerDifMun = Alquiler21Mun - Alquiler11Mun)
+
+compra_total_mun %>%
+    distinct(AlquilerDifMun, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifMun)) %>%
+    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL, CMUN)
+
+
+# Otro
+compra_total_mun <- compra_total_mun |> 
+  mutate(
+    OtroDifProv = Otro21Mun - Otro11Mun)
+
+compra_total_mun %>%
+    distinct(OtroDifProv, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifProv)) %>%
+    select(OtroDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
 
 
 
 ```
 
-Calcular dierencia propiedad entre años. 
+### Por provincia
+
+```{r}
+#  Propiedad
+compra_total_mun <- compra_total_mun |>
+  group_by(CPRO) |> 
+  mutate(
+    PropiedadDifProv = Propiedad21Prov - Compra11Prov) |> 
+  ungroup()
+
+compra_total_mun %>%
+    distinct(PropiedadDifProv, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifProv)) %>%
+    select(PropiedadDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
+
+# Alquiler
+compra_total_mun <- compra_total_mun |>
+  group_by(CPRO) |> 
+  mutate(
+    AlquilerDifProv = Alquiler21Prov - Alquiler11Prov) |> 
+  ungroup()
+
+compra_total_mun %>%
+    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifProv)) %>%
+    select(AlquilerDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
+
+
+# Otro
+compra_total_mun <- compra_total_mun |>
+  group_by(CPRO) |> 
+  mutate(
+    OtroDifProv = Otro21Prov - Otro11Prov) |> 
+  ungroup()
+
+compra_total_mun %>%
+    distinct(OtroDifProv, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifProv)) %>%
+    select(OtroDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
+```
+
+
+
 analizar los municinipios..
 
 Hacer el analisis de componentes pero con las varibales que hablamos y con este perfil de solo compra (?)
+
+
