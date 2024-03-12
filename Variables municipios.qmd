@@ -1,0 +1,309 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(haven)
+```
+
+## Municipios: Base de datos inicial
+
+```{r}
+
+municipios <- read_sav("Microdatos2011/Personas/poblacion_2011_v2.sav") |> 
+  select(CPRO, CMUN)
+
+# Crear los códigos cusec de los municipios no especificados
+cusec_991 <- sprintf("%05d", seq(1991, 52991, by = 1000))
+cusec_992 <- sprintf("%05d", seq(1992, 52992, by = 1000))
+cusec_993 <- sprintf("%05d", seq(1993, 52993, by = 1000))
+cusec_994 <- sprintf("%05d", seq(1994, 52994, by = 1000))
+cusec <- c(cusec_991, cusec_992, cusec_993, cusec_994)
+
+MUN_LITERAL <- 
+  ifelse(substr(cusec, 4, 5) == "91","<=2000",
+  ifelse(substr(cusec, 4, 5) == "92", "2001 <= 5000",
+  ifelse(substr(cusec, 4, 5) == "93", "5001 <= 10000",
+  ifelse(substr(cusec, 4, 5) == "94", "10001 <= 20000","Otros"))))
+
+df_rural <- data.frame(MUN_LITERAL, cusec)
+
+# Obtener nombres de todos los municipios y provincias
+locations <- read_excel("vivienda turística/exp_viv_turistica_tabla5_FEB2021.xlsx", sheet = 3, na = "Dato protegido por secreto estadístico.")
+
+nombres_municipios <- locations |> 
+  select(MUN_LITERAL, MUN) |> 
+  rename(cusec = MUN) |> 
+  distinct(cusec, .keep_all = TRUE)
+
+nombres_provincias <- locations |> 
+  select(PROV_LITERAL, PROV) |> 
+  rename(CPRO = PROV) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+nombres_municipios <- rbind(nombres_municipios, df_rural)
+  
+# Añadir nombres de provincias y municipios
+municipios <- municipios |> 
+  mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
+   mutate(  
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
+  
+  left_join(nombres_municipios, by = "cusec") |> 
+  left_join(nombres_provincias, by = "CPRO") |> 
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia")) |> 
+
+  distinct(cusec, .keep_all = T)
+
+
+```
+
+## Variables de los municipios
+
+De cara al análisis de componentes o clusters de los municipios, preparo una tabla con distintas variables para caracterizarlos. Las limitaciones son que para el análisis con todas las variables, no cuento con los municipios menores a 20.000 habitantes. Para estos municipios rurales solo puedo usar las primeras 3 variables que pongo aquí.
+
+-   Porcentaje de población según nacionalidad.
+
+-   Porcentaje de jóvenes que residen en propiedad/alquiler/otro.
+
+-   Diferencia del porcentaje de jóvenes por régimen de tenencia entre 2011 y 2021.
+
+-   Porcentaje de vivienda turística.
+
+-   Índice de Precios de Vivienda en Alquiler en 2011 y en 2021.
+
+-   Índice de Precios de Vivienda (CCAA)
+
+-   Renta por municipio
+-   Porcentaje de población joven
+-   Municipio rural o urbano
+-   Porcentaje de viviendas vacías
+-   Porcentaje de viviendas secundarias
+
+
+### Índice de Precios de Vivienda en Alquiler
+
+A nivel de municipio.
+
+```{r}
+
+ipva <- read_excel("Índice precios alquiler/59060.xls")
+
+# Ajustar los cusec de 'Resto PROViNCIA'
+ipva <- ipva |> 
+  mutate(cusec = if_else(str_detect(cusec, "^Resto"), str_replace(lag(cusec), "\\d{2}$", "99"), cusec))  
+
+# Limpiar tabla
+ipva <- ipva |> 
+  mutate(MUN_LITERAL = substr(cusec, 7, nchar(cusec)), 
+         cusec = substr(cusec, 1, 5)) |> 
+  rename(ipva2021 = "2021", ipva2011 = "2011") |> 
+  select(-MUN_LITERAL)
+
+
+municipios <- municipios |> 
+  left_join(ipva, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
+
+```
+
+### Índice de Precios de Vivienda
+
+A nivel de CCAA.
+
+```{r}
+
+ipv <- read_xlsx("Índice precios vivienda/ipv.xlsx") |> 
+  rename(ipv2021 = "2021T2", ipv2011 = "2011T2", tipoipv=Tipo)
+
+municipios <- municipios |> 
+  left_join(ipv, by = "CCAA") |> 
+  select(-ccaa) |> 
+  distinct(cusec, .keep_all = T)
+
+
+```
+
+### Renta por municipios
+
+Obtengo los datos de la web de Agencia Tributaria, lo guardo en un .csv y lo limpio a partir de ahí.
+
+```{r, results=hide, echo=FALSE}
+
+#library(rvest)
+
+#html_data <- read_html("https://sede.agenciatributaria.gob.es/AEAT/Contenidos_Comunes/La_Agencia_Tributaria/Estadisticas/Publicaciones/sites/irpfmunicipios/2021/jrubik90ae83991146960352dc69bb31fd1601593c7eb.html")
+
+# Extraer los datos de la tabla utilizando el XPath
+#tabla_data <- html_data %>%
+#  html_nodes(xpath = "/html/body/div[1]/div[5]") %>%
+#  html_table()
+
+# Seleccionar tibble
+#tabla_data <- tabla_data[[1]]
+
+# Guardar archivo .csv
+
+#write.csv(tabla_data, "rentamunicipios.csv")
+
+```
+
+```{r}
+
+renta <- read_csv("Renta por municipios/rentamunicipios.csv")
+
+renta <- renta |> 
+  rename(MUN_LITERAL =...2) |> 
+  select(MUN_LITERAL, `RENTA DISPONIBLEMEDIANA`) |> 
+  mutate(cusec = as.character(gsub("[^0-9]", "", MUN_LITERAL)),
+         MUN_LITERAL = gsub("[0-9-]", "", MUN_LITERAL),
+         `RENTA DISPONIBLEMEDIANA` = gsub("\\.", "", `RENTA DISPONIBLEMEDIANA`)) |> 
+  filter(nchar(cusec) >= 2) |> 
+  select(-MUN_LITERAL) |> 
+  rename(RentaMediana = `RENTA DISPONIBLEMEDIANA`) |> 
+    mutate(cusec = as.character(cusec), cusec = as.numeric(cusec))
+
+municipios <- municipios |> 
+  left_join(renta, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
+
+```
+
+### Proporción de población joven
+
+Menor de 35 años. Los microdatos son una muestra del 10%, con lo cual no tendré los datos exactos de población (o podría estimarlos multiplicando por 10).
+
+```{r}
+
+load("Microdatos2021/Personas/R/CensoPersonas_2021.RData")
+
+microdatos2021 <- Microdatos
+
+poblacion2021 <- microdatos2021 |> 
+  select(CPRO, CMUN, VAREDAD) |> 
+  mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+  group_by(cusec) |> 
+  mutate(Población2021 = n()) |> 
+  filter(VAREDAD >= 0 & VAREDAD <= 35) |>  
+  mutate(PorcentajeJoven2021 = n() / n() * 100) |> 
+  ungroup() |> 
+  distinct(cusec, .keep_all = TRUE)
+
+microdatos2011 <- read_sav("Microdatos2011/Personas/poblacion_2011_v2.sav")
+
+poblacion2011 <- microdatos2011 |> 
+  select(CPRO, CMUN, EDAD) |> 
+  mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+  group_by(cusec) |> 
+  mutate(Población2011 = n()) |> 
+  filter(EDAD >= 0 & EDAD <= 35) |> 
+  mutate(PorcentajeJoven2011 = n() / n() * 100) |> 
+  ungroup() |>  
+  distinct(cusec, .keep_all = TRUE)
+
+
+```
+
+### Rural o urbano
+Realmente esto solo mide la población de más o menos 20000 habitantes. Pero he visto que hasta en en un informe llamado DEMOGRAFÍA DE LA POBLACIÓN RURAL del Ministerio, "la cual 
+clasifica un municipio como rural si tiene menos de 30.000 habitantes y menos de 100 habitantes por km2". Aquí voy a usar 20.000 habitantes y no veré la densidad de población.
+
+En principio, calcularlo del 2011 está bien porque en 2011 hay menos municipios porque también 'censura' los de 10k a 20k habitantes.
+```{r}
+
+habitat <- microdatos2011 |>
+  select(CPRO, CMUN) |> 
+  mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+   mutate(
+     HABITAT = case_when(
+       CMUN %in% c(991, 992, 993, 994) ~ "Rural",
+       TRUE ~ "Urbano"))
+
+
+```
+
+### Viviendas vacías
+
+En 2011 es muy claro, porque se clasifican como tal. En 2021 sólo hay viviendas no principales. Ésto sale de una tabla prefabricada del INE https://www.ine.es/jaxi/Tabla.htm?tpx=59531&L=0
+```{r}
+
+vacias2021 <- read_xlsx("Vacias/vacias2021.xlsx") 
+
+vacias2021 <- vacias2021 |> 
+  mutate(
+    cusec = as.character(substring(MUN_LITERAL, 1, 5)), 
+    MUN_LITERAL = gsub("\\d+\\s", "", MUN_LITERAL))
+
+# 2011
+viviendas2011 <- read_sav("Microdatos2011/Viviendas/viviendas_2011_v1.sav")
+
+vacias2011 <- viviendas2011 |> 
+  select(CPRO, CMUN, CVIVIF) |> 
+  filter(CVIVIF == 3) |>
+  mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
+   mutate(  
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
+  group_by(cusec) |> 
+  mutate(ViviendasVacias2011 = n()) |> 
+  distinct(cusec, .keep_all = T)
+
+```
+
+### Viviendas secundarias
+
+```{r}
+
+viviendas2021 <- load("Microdatos2021/Viviendas/R/CensoViviendas_2021.RData")
+
+viviendas2021 <- Microdatos
+
+secundarias2021 <- viviendas2021 |> 
+    select(CPRO, CMUN, TIPO_VIV) |> 
+  filter(TIPO_VIV == 0) |> 
+   mutate(  
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
+  group_by(cusec) |> 
+  mutate(ViviendasSecundarias2021 = n()) |> 
+  distinct(cusec, .keep_all = T)
+
+
+secundarias2011 <- viviendas2011 |> 
+  select(CPRO, CMUN, CVIVIF) |> 
+  filter(CVIVIF == 2) |>
+  mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |>
+     mutate(  
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
+  group_by(cusec) |> 
+  mutate(ViviendasSecundarias2011 = n()) |> 
+  distinct(cusec, .keep_all = T)
+
+
+```
+
+### Viviendas turísticas
+
+```{r}
+
+
+
+
+```
+
