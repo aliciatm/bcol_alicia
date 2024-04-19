@@ -770,15 +770,40 @@ jovenes_total |>
 
 ```
 
+# -
+
+# Paquetes y ccaas
+
+```{r}
+
+library(tidyverse)
+library(ggpubr)
+library(ggplot2)
+library(patchwork)
+library(readxl)
+library(haven)
+
+
+# Añadir CCAA 
+ccaas <- data.frame(
+  CodigoProvincia = c("01", "02", "03", "04", "33", "05", "06", "08", "09", "10", "11", "39", "12", "13", "14", "16", "17", "18", "19", "20", "21", "22", "23", "07", "24", "15", "35", "25", "26", "27", "28", "29", "30", "31", "32", "34", "36", "37",
+"38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52"),
+  
+  CCAA = c("País Vasco", "Castilla-La Mancha", "Comunidad Valenciana", "Andalucía", "Asturias", "Castilla y León", "Extremadura", "Cataluña", "Castilla y León", "Extremadura", "Andalucía", "Cantabria", "Comunidad Valenciana", "Castilla-La Mancha", "Andalucía", "Castilla-La Mancha", "Cataluña", "Andalucía", "Castilla-La Mancha", "País Vasco", "Andalucía", "Aragón", "Andalucía", "Islas Baleares", "Castilla y León", "Galicia", "Canarias", "Cataluña", "La Rioja", "Galicia", "Comunidad de Madrid", "Andalucía", "Comunidad de Murcia", "Comunidad Foral de Navarra", "Galicia", "Castilla y León", "Galicia", "Castilla y León", "Canarias", "Cantabria", "Castilla y León", "Andalucía", "Castilla y León", "Cataluña", "Aragón", "Castilla-La Mancha", "Comunidad Valenciana", "Castilla y León", "País Vasco", "Castilla y León", "Aragón", "Ceuta", "Melilla"))
+
+
+```
+
 # Definiendo a los jóvenes que compran
 
+https://www.ine.es/prensa/ecepov_2021_feb.pdf
 
-## En 2011
+### En 2011
 
 ```{r}
 
 compra11 <- microdatos2011 |> 
-  select(CPRO, CMUN, EDAD, ANAC, NORDEN, ANORES, ANOM, LTRABA, MUNTRABA, TENEN, CON_NORDEN, OPA_NORDEN, TIPOPER, ESTHOG, EDADPAD, EDADMAD) 
+  select(CPRO, CMUN, EDAD, SEXO, ANAC, NORDEN, ANORES, ANOM, LTRABA, MUNTRABA, TENEN, CON_NORDEN, OPA_NORDEN, TIPOPER, ESTHOG, EDADPAD, EDADMAD) 
 
 compra11 <- compra11 |> 
   filter(EDAD %in% c(18:35), # Jóvenes
@@ -791,7 +816,12 @@ compra11 <- compra11 |>
 compra11 <- compra11 |> 
   mutate(mayor = ifelse(ANORES - ANAC > 18, TRUE, FALSE)) |> 
   filter(mayor == TRUE) # Que era mayor de edad en la última mudanza
-  
+
+compra11r <- compra11 |> 
+  filter(NORDEN %in% c(1, 2)) |># Que es 1 o 2 en el núcleo
+  filter(!(OPA_NORDEN %in% c(1))) # Que otro pariente no es 1
+
+
 #Recodificar tenen viv
 compra11 <- compra11 |>  
   mutate(
@@ -849,24 +879,24 @@ compra11 <- compra11 |>
   
   left_join(nombres_municipios, by = "cusec") |> 
   left_join(nombres_provincias, by = "CPRO") |> 
-  
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia")) |> 
+
   distinct(id, .keep_all = T)
+
 
 compra11_r <- compra11 |> 
   filter(TENEN_r %in% c("Propiedad por compra, pagada", "Propiedad por compra, pagos pendientes"))
   
 ```
 
-
-## En 2021
+### En 2021
 
 Hay limitaciones, porque no puedo retirar exactamente que NO sean herencia.
-
 
 ```{r}
 
 compra21 <- microdatos2021 |> 
-  select(CPRO, CMUN, VAREDAD, ANAC, TENEN_VIV, NORDEN, RESI_NACIM, VARANORES, VARANOM, CMUN_ANT, CMUN_UNANO, RESI_UNANO, CMUN_DANO, RESI_DANO, LTRAB, CMUN_TRAB, LEST, CMUN_EST, NORDEN_CON, NORDEN_OPA, TIPOPER, SEXO_MAD, SEXO_PAD, ESTRUC_HOG) 
+  select(CPRO, CMUN, VAREDAD, SEXO, ANAC, TENEN_VIV, NORDEN, RESI_NACIM, VARANORES, VARANOM, CMUN_ANT, CMUN_UNANO, RESI_UNANO, CMUN_DANO, RESI_DANO, LTRAB, CMUN_TRAB, LEST, CMUN_EST, NORDEN_CON, NORDEN_OPA, TIPOPER, SEXO_MAD, SEXO_PAD, ESTRUC_HOG) 
 
 compra21 <- compra21 |> 
   filter(VAREDAD %in% c(18:35), # Jóvenes
@@ -890,7 +920,11 @@ compra21 <- compra21 |>
       mayor = ifelse(VARANORES_r - ANAC > 18, TRUE, FALSE)) |> 
   filter(mayor == TRUE)
 
+compra21 <- compra21 |>
+  filter(NORDEN %in% c("01", "02")) |> # Que es orden 1 o 2 en el núcleo
+  filter(!(NORDEN_OPA %in% c("01")))
 
+# Recodificar rég tenencia
 compra21 <- compra21 |> 
     mutate(
     TENEN_VIV = case_when(
@@ -922,7 +956,8 @@ compra21 <- compra21 |>
   
   left_join(nombres_municipios, by = "cusec") |> 
   left_join(nombres_provincias, by = "CPRO") |> 
-  
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia")) |> 
+
   distinct(id, .keep_all = T)
 
 
@@ -932,26 +967,28 @@ compra21_r <- compra21 |>
 ```
 
 ## Descriptivo
+
 ### 2011
-Hay menos jóvenes con las condiciones especificadas en 2021 que en 2011. 
 
-- Edad. La media de edad en 2011 es de 31,1, en 2021 es de 30,35.
+Hay menos jóvenes con las condiciones especificadas en 2021 que en 2011.
 
-- Número de orden en el núcleo. La mitad de los casos tienen a la persona encuestada como primera persona en el orden del núcleo, con un 42,8% restante siendo la segunda persona. Le siguen un 4,1% siendo la tercera persona, un 2,3% la cuarta, 1% la quinta, y porecentajes desdeñables el resto. Hay una persona que es la persona número 24. Vemos exactamente quiénes son estas personas: personas con un 50% de desempleo (25% superior al resto). Residiendo en Ceuta, Melilla. Son 941 personas.
+-   Edad. La media de edad en 2011 es de 31,1, en 2021 es de 30,35.
 
-- Orden de un pariente. Quizá quitar personas que su otro pariente tiene un orden superior (1, 2?) La mayoría de casos los parientes son el número 3, con 93%. (pueden ser hijos, por ejemplo). En un 44% de los casos no hay familiares.
+-   Número de orden en el núcleo. La mitad de los casos tienen a la persona encuestada como primera persona en el orden del núcleo, con un 42,8% restante siendo la segunda persona. Le siguen un 4,1% siendo la tercera persona, un 2,3% la cuarta, 1% la quinta, y porecentajes desdeñables el resto. Hay una persona que es la persona número 24. Vemos exactamente quiénes son estas personas: personas con un 50% de desempleo (25% superior al resto). Residiendo en Ceuta, Melilla. Son 941 personas.
 
-- Trabajo. La mayoría de personas trabajan en un municipio distinto al que residen (45,5%), seguido de personas que trabajan en el mismo municipio (36,6%). 
+-   Orden de un pariente. Quizá quitar personas que su otro pariente tiene un orden superior (1, 2?) La mayoría de casos los parientes son el número 3, con 93%. (pueden ser hijos, por ejemplo). En un 44% de los casos no hay familiares.
 
-- Año de llegada a la vivienda. En la mayoría de los casos se llegó en 2006 o 2007 (es también la media). Sería una edad media de 25-26 años.
+-   Trabajo. La mayoría de personas trabajan en un municipio distinto al que residen (45,5%), seguido de personas que trabajan en el mismo municipio (36,6%).
 
-- Condición dentro del núcleo. Un 79% delas personas son cónyuges, un 17.5% personas que viven solas y el resto madres y padres solteros.
+-   Año de llegada a la vivienda. En la mayoría de los casos se llegó en 2006 o 2007 (es también la media). Sería una edad media de 25-26 años.
 
-- Estructura del hogar. La mayoría de los casos, 44,8%, es un hogar formado por una pareja con hijos. En segundo lugar, 29,6%, hogar formado por pareja sin hijos. En tercer lugar, con 5,9%, 'otro tipo de hogar', que puede ser compañeros de piso no emparentados, o otros familiares. El último es padre o madre soltera.
+-   Condición dentro del núcleo. Un 79% delas personas son cónyuges, un 17.5% personas que viven solas y el resto madres y padres solteros.
 
-- Tipo de compra. En el 90,1% de los casos quedan pagos de la hipoteca pendientes.
+-   Estructura del hogar. La mayoría de los casos, 44,8%, es un hogar formado por una pareja con hijos. En segundo lugar, 29,6%, hogar formado por pareja sin hijos. En tercer lugar, con 5,9%, 'otro tipo de hogar', que puede ser compañeros de piso no emparentados, o otros familiares. El último es padre o madre soltera.
 
-- Provincia. No da mucha información porque salen las provincias más y menos pobladas, no proporcionalmente según su población.
+-   Tipo de compra. En el 90,1% de los casos quedan pagos de la hipoteca pendientes.
+
+-   Provincia. No da mucha información porque salen las provincias más y menos pobladas, no proporcionalmente según su población.
 
 ```{r}
 # Edad
@@ -994,21 +1031,23 @@ head(sort(prop.table(table(compra11_r$PROV_LITERAL)), decreasing = TRUE), 3)
 tail(sort(prop.table(table(compra11_r$PROV_LITERAL)), decreasing = TRUE), 3)
 
 ```
+
 ### 2021
 
-- Edad. La edad es más joven lo cual me hace suponer que es por filtrar mal.
+-   Edad. La edad es más joven lo cual me hace suponer que es por filtrar mal.
 
-- Número de orden. Un 37,3% es número 1, un 44,4% número 2, seguido de un 11,5% 3 y 4,6% 4. Hay más personas donde la persona joven no es número 1 ni 2, seguramente estoy incluyendo casos que no me interesan que no son compra. Quizá filtrar directamente a partir de 4?
+-   Número de orden. Un 37,3% es número 1, un 44,4% número 2, seguido de un 11,5% 3 y 4,6% 4. Hay más personas donde la persona joven no es número 1 ni 2, seguramente estoy incluyendo casos que no me interesan que no son compra. Quizá filtrar directamente a partir de 4?
 
 Las personas con un orden de 6 o más presentan más desempleo, al igual que en 2011. Son 1494.
 
-- Trabajo. Un 29% no trabajan. La población joven con otros regimenes de tenencia, sin filtrar por compra, es un 32%.
+-   Trabajo. Un 29% no trabajan. La población joven con otros regimenes de tenencia, sin filtrar por compra, es un 32%.
 
-- Otro pariente. En la mayoría de los casos el familiar es número 3, seguido de 4. En un 51% de casos no hay parientes. Es más alto que en 2011.
+-   Otro pariente. En la mayoría de los casos el familiar es número 3, seguido de 4. En un 51% de casos no hay parientes. Es más alto que en 2011.
 
-- Condición dentro del núcleo. La mayoría 58,5% viven en pareja. Hay el doble de personas que viven solas, que en 2011, un 36,6%. Hay también más madres solteras, pero igual padres solteros.
+-   Condición dentro del núcleo. La mayoría 58,5% viven en pareja. Hay el doble de personas que viven solas, que en 2011, un 36,6%. Hay también más madres solteras, pero igual padres solteros.
 
-- Estructura del hogar. La mayoría de hogares son familias en pareja con hijos (30,2%), pero menos que en 2011 (44,8%).  Continúan en empate pareja sin hijos 19,6% y otro tipo de hogar, pero ha aumentado mucho más este otro tipo de hogar en 2021.
+-   Estructura del hogar. La mayoría de hogares son familias en pareja con hijos (30,2%), pero menos que en 2011 (44,8%). Continúan en empate pareja sin hijos 19,6% y otro tipo de hogar, pero ha aumentado mucho más este otro tipo de hogar en 2021.
+
 ```{r}
 
 # Edad
@@ -1051,8 +1090,9 @@ head(sort(prop.table(table(compra21_r$PROV_LITERAL)), decreasing = TRUE), 3)
 tail(sort(prop.table(table(compra21_r$PROV_LITERAL)), decreasing = TRUE), 3)
 ```
 
+# ¿Dónde compran?
 
-## Dónde compran en 2011
+### En 2011 - Crear variables
 
 ```{r}
 
@@ -1075,27 +1115,244 @@ compra11 <- compra11 |>
     Alquiler11Prov = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
     Otro11Prov = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>   ungroup()
 
-
-compra11 |> 
-    distinct(cusec, .keep_all = TRUE) |> 
-  arrange(desc(Compra11Mun)) |> 
-    select(Compra11Mun, MUN_LITERAL, PROV_LITERAL, cusec)
-
-compra11 |> 
-    distinct(cusec, .keep_all = TRUE) |> 
-  arrange(desc(Herencia11Mun)) |> 
-    select(Herencia11Mun, MUN_LITERAL, PROV_LITERAL, cusec)
-
-compra11 |> 
-    distinct(CPRO, .keep_all = TRUE) |> 
-    arrange(desc(Compra11Prov)) |> 
-    select(Compra11Prov, PROV_LITERAL)
+# Por CCAA
+compra11 <- compra11 |> 
+  group_by(CCAA) |> 
+  mutate(
+    Compra11CCAA = round((sum(TENEN_VIV == "Compra") / n()) * 100, 2),
+    Herencia11CCAA = round((sum(TENEN_VIV == "Herencia o donación") / n()) * 100, 2),
+    Alquiler11CCAA = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro11CCAA = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>   ungroup()
 
 
 ```
 
+### En 2021 - Crear variables
 
-### Mapa por provincias
+```{r}
+
+# Por municipio
+compra21 <- compra21 |> 
+  group_by(cusec) |> 
+  mutate(
+    Propiedad21Mun = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |> 
+  ungroup()
+
+# Por provincia
+compra21 <- compra21 |> 
+  group_by(CPRO) |> 
+  mutate(
+    Propiedad21Prov = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21Prov = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21Prov = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>   ungroup()
+
+# Por CCAA
+compra21 <- compra21 |> 
+  group_by(CCAA) |> 
+  mutate(
+    Propiedad21CCAA = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21CCAA = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21CCAA = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>   ungroup()
+
+
+```
+
+## Análisis
+
+## En 2011
+
+### Por municipio
+
+-   Propiedad 2021 con filtro (nuevo). Los municipios con más propiedad juvenil con las características que hemos definido (no vive con los padres, se mudó por última vez con mínimo 18 años...) son Martos con un 91% de propiedad frente a otros regímenes de tenencia, otros pueblos de Jaén o andaluces. Los que menos son catalanes, las islas.
+
+-   Compra 2011 con filtro (nuevo). Los municipios con más compra juvenil son municipios pequeños de Zamora o municipios valencianos y andaluces.
+
+-   Herencia 2011 con filtro (nuevo). Los municipios con más jovenes por herencia son municipios pequeños de LAs Palmas, Galicia. La gran mayoría son este tipo de municipios.
+
+```{r}
+
+# Compra
+top_compra_2011 <- compra11 %>%
+  arrange(desc(Compra11Mun)) %>%
+  distinct(Compra11Mun, .keep_all = TRUE) |> 
+  select(Compra11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Herencia
+top_herencia_2011 <- compra11 %>%
+  arrange(desc(Herencia11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Herencia11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Alquiler
+top_alquiler_2011 <- compra11 %>%
+  arrange(desc(Alquiler11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Alquiler11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Otro
+top_otro_2011 <- compra11 %>%
+  arrange(desc(Otro11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Otro11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+top_compra_2011
+top_herencia_2011
+top_alquiler_2011
+top_otro_2011
+
+```
+
+### Por provincia
+
+```{r}
+
+# Compra
+top_compra_2011 <- compra11 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Compra11Prov)) |> 
+    select(Compra11Prov, PROV_LITERAL, CCAA)
+
+# Herencia
+top_herencia_2011 <- compra11 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Herencia11Prov)) |> 
+    select(Herencia11Prov, PROV_LITERAL, CCAA)
+
+# Alquiler
+top_alquiler_2011 <- compra11 %>%
+  arrange(desc(Alquiler11Prov)) %>%
+  distinct(CPRO, .keep_all = TRUE) |> 
+  select(Alquiler11Prov, PROV_LITERAL, CCAA)
+
+# Otro
+top_otro_2011 <- compra11 %>%
+  arrange(desc(Otro11Prov)) %>%
+  distinct(CPRO, .keep_all = TRUE) |> 
+  select(Otro11Prov, PROV_LITERAL, CCAA)
+
+top_compra_2011
+top_herencia_2011
+top_alquiler_2011
+top_otro_2011
+
+```
+
+### Por CCAA
+
+```{r}
+
+# Compra
+top_compra_2011 <- compra11 |> 
+    distinct(CCAA, .keep_all = TRUE) |> 
+    arrange(desc(Compra11CCAA)) |> 
+    select(Compra11CCAA, CCAA)
+
+# Herencia
+top_herencia_2011 <- compra11 |> 
+    distinct(CCAA, .keep_all = TRUE) |> 
+    arrange(desc(Herencia11CCAA)) |> 
+    select(Herencia11CCAA, CCAA)
+
+# Alquiler
+top_alquiler_2011 <- compra11 %>%
+  arrange(desc(Alquiler11CCAA)) %>%
+  distinct(CCAA, .keep_all = TRUE) |> 
+  select(Alquiler11CCAA, CCAA)
+
+# Otro
+top_otro_2011 <- compra11 %>%
+  arrange(desc(Otro11CCAA)) %>%
+  distinct(CCAA, .keep_all = TRUE) |> 
+  select(Otro11CCAA, CCAA)
+
+top_compra_2011
+top_herencia_2011
+top_alquiler_2011
+top_otro_2011
+
+```
+
+## En 2021
+
+### Por municipio
+
+```{r}
+
+# Propiedad
+top_propiedad_2021 <- compra21 |> 
+    distinct(cusec, .keep_all = TRUE) |> 
+    arrange(desc(Propiedad21Mun)) |> 
+    select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Alquiler
+top_propiedad_2021 <- compra21 |> 
+    distinct(cusec, .keep_all = TRUE) |> 
+    arrange(desc(Alquiler21Mun)) |> 
+    select(Alquiler21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Otro
+top_propiedad_2021 <- compra21 |> 
+    distinct(cusec, .keep_all = TRUE) |> 
+    arrange(desc(Otro21Mun)) |> 
+    select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+```
+
+### Por provincia
+
+```{r}
+
+# Propiedad
+top_propiedad_2021 <- compra21 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Propiedad21Prov)) |> 
+    select(Propiedad21Prov, PROV_LITERAL, CCAA)
+
+# Alquiler
+top_propiedad_2021 <- compra21 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Alquiler21Prov)) |> 
+    select(Alquiler21Prov, PROV_LITERAL, CCAA)
+
+# Otro
+top_propiedad_2021 <- compra21 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Otro21Prov)) |> 
+    select(Propiedad21Mun, PROV_LITERAL, CCAA)
+
+```
+
+### Por CCAA
+
+```{r}
+
+# Propiedad
+top_propiedad_2021 <- compra21 |> 
+    distinct(CCAA, .keep_all = TRUE) |> 
+    arrange(desc(Propiedad21CCAA)) |> 
+    select(Propiedad21CCAA, CCAA)
+
+# Alquiler
+top_propiedad_2021 <- compra21 |> 
+    distinct(CCAA, .keep_all = TRUE) |> 
+    arrange(desc(Alquiler21CCAA)) |> 
+    select(Alquiler21CCAA, CCAA)
+
+# Otro
+top_propiedad_2021 <- compra21 |> 
+    distinct(CCAA, .keep_all = TRUE) |> 
+    arrange(desc(Otro21CCAA)) |> 
+    select(Otro21CCAA, CCAA)
+
+```
+
+## Mapas
+
+## En 2011
+
+### Por provincia
 
 ```{r, fig.height=6, fig.width=12}
 
@@ -1209,48 +1466,17 @@ p4 <- ggplot(esp_can) +
 
 ggarrange(p1, p2, p3, p4, ncol=2, nrow = 2)
 
-```
-## Dónde compran en 2021
-
-```{r}
-
-# Por municipio
-compra21 <- compra21 |> 
-  group_by(cusec) |> 
-  mutate(
-    Propiedad21Mun = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
-    Alquiler21Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
-    Otro21Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |> 
-  ungroup()
-
-# Por provincia
-compra21 <- compra21 |> 
-  group_by(CPRO) |> 
-  mutate(
-    Propiedad21Prov = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
-    Alquiler21Prov = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
-    Otro21Prov = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>   ungroup()
-
-compra21 |> 
-    distinct(cusec, .keep_all = TRUE) |> 
-  arrange(desc(Propiedad21Mun)) |> 
-    select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, cusec)
-
-compra21 |> 
-    distinct(CPRO, .keep_all = TRUE) |> 
-    arrange(desc(Propiedad21Prov)) |> 
-    select(Propiedad21Prov, PROV_LITERAL)
-
-
 
 ```
 
-### Mapa por provincias
+## En 2021
+
+### Por provincia
 
 ```{r, fig.height=6, fig.width=12}
 
 library(mapSpain)
-  
+
 esp_can <- esp_get_country() 
 can_prov <- esp_get_can_provinces()
 can_box <- esp_get_can_box() 
@@ -1266,7 +1492,7 @@ mapa <- compra21 |>
 mapa <- provic |> 
   left_join(mapa, by = "CPRO")
 
-# Compra
+# Propiedad
 p1 <- ggplot(esp_can) +
   geom_sf() +
   geom_sf(data = can_prov) +
@@ -1337,110 +1563,10 @@ ggarrange(p1, p3, p4, ncol=2, nrow = 2)
 
 ```
 
-
-
-## Comparar la propiedad así con la propiedad sin los filtros.
-
-### Provincias
-
-- 2021 con filtro. La provincia 
-
-```{r}
-
-# Top provincias con más propiedad en 2021
-top_propiedad_2021_filtro <- compra21 %>%
-  arrange(desc(Propiedad21Prov)) %>%
-  distinct(Propiedad21Prov, .keep_all = TRUE) |> 
-  select(Propiedad21Prov, PROV_LITERAL)
-
-
-# Top provincias con más propiedad en 2021 NO FILTRO
-top_propiedad_2021 <- jovenes_total %>%
-  arrange(desc(Propiedad21Prov)) %>%
-  distinct(Propiedad21Prov, .keep_all = TRUE) |> 
-  select(Propiedad21Prov, PROV_LITERAL)
-
-
-# Top provincias con más propiedad en 2011
-top_propiedad_2011_filtro <- compra11 %>%
-  arrange(desc(Compra11Prov)) %>%
-  distinct(Compra11Prov, .keep_all = TRUE) |> 
-  select(Compra11Prov, PROV_LITERAL)
-
-
-# Top CCAA con más propiedad en 2011 NO FILTRO
-top_propiedad_2011 <- jovenes_total %>%
-  arrange(desc(Propiedad11Prov)) %>%
-    distinct(Propiedad11Prov, .keep_all = TRUE) |> 
-    select(Propiedad11Prov, PROV_LITERAL)
-
-
-# Top provincias con más compra en 2011
-top_compra_2011 <- compra11 %>%
-  arrange(desc(Compra11Prov)) %>%
-  distinct(Compra11Prov, .keep_all = TRUE) |> 
-  select(Compra11Prov, PROV_LITERAL)
-
-top_propiedad_2021_filtro
-top_propiedad_2021
-top_propiedad_2011_filtro
-top_propiedad_2011
-top_compra_2011
-
-```
-
-### Municipios
-```{r}
-
-# Top municipios con más propiedad en 2021
-top_propiedad_2021_filtro <- compra21 %>%
-  arrange(desc(Propiedad21Mun)) %>%
-  distinct(Propiedad21Mun, .keep_all = TRUE) |> 
-  select(Propiedad21Mun, PROV_LITERAL)
-
-# Top municipios con más propiedad en 2021 NO FILTRO
-top_propiedad_2021 <- jovenes_total %>%
-  arrange(desc(Propiedad21Mun)) %>%
-  distinct(Propiedad21Mun, .keep_all = TRUE) |> 
-  select(Propiedad21Mun, PROV_LITERAL)
-
-# Top municipios con más propiedad en 2011
-top_propiedad_2011 <- compra11 %>%
-  arrange(desc(Compra11Mun)) %>%
-  distinct(Compra11Mun, .keep_all = TRUE) |> 
-  select(Compra11Mun, PROV_LITERAL)
-
-# Top municipios con más propiedad en 2011 NO FILTRO
-top_propiedad_2011 <- jovenes_total %>%
-  arrange(desc(Propiedad11Mun)) %>%
-    distinct(Propiedad11Mun, .keep_all = TRUE) |> 
-    select(Propiedad11Mun, PROV_LITERAL)
-
-# Top municipios con más compra en 2011
-top_compra_2011 <- compra11 %>%
-  arrange(desc(Compra11Mun)) %>%
-  distinct(Compra11Mun, .keep_all = TRUE) |> 
-  select(Compra11Mun, PROV_LITERAL)
-
-# Top provincias con más herencia en 2011
-top_compra_2021 <- compra11 %>%
-  arrange(desc(Herencia11Mun)) %>%
-  distinct(Herencia11Mun, .keep_all = TRUE) |> 
-  select(Herencia11Mun, PROV_LITERAL)
-
-top_propiedad_2021_filtro
-top_propiedad_2021
-top_propiedad_2011_filtro
-top_propiedad_2011
-top_compra_2011
-top_compra_2011
-
-```
-
-
-## Diferencia entre años
+## Filtro vs no filtro
 
 Juntar tablas
+
 ```{r}
 
 compra11_mun <- compra11 |> 
@@ -1449,51 +1575,128 @@ compra11_mun <- compra11 |>
 compra21_mun <- compra21 |> 
   distinct(cusec, .keep_all=T)
 
-compra_total_mun <- compra11_mun |> 
+compra_total <- compra11_mun |> 
   left_join(compra21_mun, by = "cusec") |> 
     rename_with(~str_replace(., "\\.y$", ""), .cols = ends_with(".y")) |>
   select(-ends_with(".x")) |> 
   distinct(cusec, .keep_all=T)
   
+```
+
+## En 2011
+
+```{r}
+
+# Top municipios con más compra en 2011
+top_propiedad_2011_filtro_mun <- compra11 %>%
+  arrange(desc(Compra11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Compra11Mun, MUN_LITERAL, PROV_LITERAL)
+
+# Top municipios con más propiedad en 2011 NO FILTRO
+#top_propiedad_2011_mun <- jovenes_total %>%
+#  arrange(desc(Compra11Mun)) %>%
+#    distinct(cusec, .keep_all = TRUE) |> 
+#    select(Compra11Mun, MUN_LITERAL, PROV_LITERAL)
+
+# Top provincias con más compra en 2011
+top_propiedad_2011_filtro <- compra11 %>%
+  arrange(desc(Compra11Prov)) %>%
+  distinct(CPRO, .keep_all = TRUE) |> 
+  select(Compra11Prov, MUN_LITERAL, PROV_LITERAL)
+
+# Top provincias con más propiedad en 2011 NO FILTRO
+#top_propiedad_2011 <- jovenes_total %>%
+#  arrange(desc(Propiedad11Prov)) %>%
+#    distinct(CPRO, .keep_all = TRUE) |> 
+#    select(Propiedad11Prov, MUN_LITERAL, PROV_LITERAL)
+
+top_propiedad_2011_filtro_mun
+#top_propiedad_2011_mun
+top_propiedad_2011_filtro
+#top_propiedad_2011
 
 ```
 
+## En 2021
 
+-   2021 con filtro. La provincia con más propiedad joven es Jaén con un 77%, seguido de Málaga, Córdoba, Cádiz, Ciudad Real... la mayoría de provincias andaluzas, seguido de Murcia, Extremadura. Las provincias con menos propiedad son Barcelona, Girona y Madrid.
+
+-   2021 sin filtro. Cambia el orden de las provincias andaluzas, añade algunas de Castilla y León. Hay más propiedad en Madrid.
+
+-   2011 con filtro. Se posiciona en primer lugar Cádiz (76%), seguido de Alicante, precisamente provincias con alto turismo.
+
+```{r}
+
+# Top municipios con más compra en 2021
+top_propiedad_2021_filtro_mun <- compra21 %>%
+  arrange(desc(Propiedad21Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Propiedad21Mun, PROV_LITERAL)
+
+# Top municipios con más propiedad en 2021 NO FILTRO
+#top_propiedad_2021_mun <- jovenes_total %>%
+#  arrange(desc(Propiedad21Mun)) %>%
+#    distinct(cusec, .keep_all = TRUE) |> 
+#    select(Propiedad21Mun, PROV_LITERAL)
+
+# Top provincias con más compra en 2021
+top_propiedad_2021_filtro <- compra21 %>%
+  arrange(desc(Propiedad21Prov)) %>%
+  distinct(CPRO, .keep_all = TRUE) |> 
+  select(Propiedad21Prov, PROV_LITERAL)
+
+# Top provincias con más propiedad en 2021 NO FILTRO
+#top_propiedad_2021 <- jovenes_total %>%
+#  arrange(desc(Propiedad21Prov)) %>%
+#    distinct(CPRO, .keep_all = TRUE) |> 
+#    select(Propiedad21Prov, PROV_LITERAL)
+
+top_propiedad_2021_filtro_mun
+#top_propiedad_2021_mun
+top_propiedad_2021_filtro
+#top_propiedad_2021
+
+```
+
+## Diferencias entre ambos años
 
 ### Por municipio
+
+-   Propiedad de 2021 - Compra de 2011. Doonde mas ha aumentado son muchos municipios rurales... me precupa no medir bien la compra solo en propiedad en vez de herencia.
 
 ```{r}
 
 # Propiedad
-compra_total_mun <- compra_total_mun |> 
+compra_total <- compra_total |> 
   mutate(
     PropiedadDifMun = Propiedad21Mun - Compra11Mun)
 
-compra_total_mun %>%
+compra_total %>%
     distinct(PropiedadDifMun, .keep_all = TRUE) |> 
   arrange(desc(PropiedadDifMun)) %>%
-    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CMUN)
+    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 # Alquiler
-compra_total_mun <- compra_total_mun |> 
+compra_total <- compra_total |> 
   mutate(
     AlquilerDifMun = Alquiler21Mun - Alquiler11Mun)
 
-compra_total_mun %>%
+compra_total %>%
     distinct(AlquilerDifMun, .keep_all = TRUE) |> 
   arrange(desc(AlquilerDifMun)) %>%
-    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL, CMUN)
+    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 
 # Otro
-compra_total_mun <- compra_total_mun |> 
+compra_total <- compra_total |> 
   mutate(
     OtroDifProv = Otro21Mun - Otro11Mun)
 
-compra_total_mun %>%
+compra_total %>%
     distinct(OtroDifProv, .keep_all = TRUE) |> 
   arrange(desc(OtroDifProv)) %>%
-    select(OtroDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
+    select(OtroDifProv, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 
 
@@ -1503,47 +1706,130 @@ compra_total_mun %>%
 
 ```{r}
 #  Propiedad
-compra_total_mun <- compra_total_mun |>
+compra_total <- compra_total |>
   group_by(CPRO) |> 
   mutate(
     PropiedadDifProv = Propiedad21Prov - Compra11Prov) |> 
   ungroup()
 
-compra_total_mun %>%
+compra_total %>%
     distinct(PropiedadDifProv, .keep_all = TRUE) |> 
   arrange(desc(PropiedadDifProv)) %>%
-    select(PropiedadDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
+    select(PropiedadDifProv, PROV_LITERAL, CCAA)
 
 # Alquiler
-compra_total_mun <- compra_total_mun |>
+compra_total <- compra_total |>
   group_by(CPRO) |> 
   mutate(
     AlquilerDifProv = Alquiler21Prov - Alquiler11Prov) |> 
   ungroup()
 
-compra_total_mun %>%
+compra_total %>%
     distinct(AlquilerDifProv, .keep_all = TRUE) |> 
   arrange(desc(AlquilerDifProv)) %>%
-    select(AlquilerDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
-
+    select(AlquilerDifProv, PROV_LITERAL, CCAA)
 
 # Otro
-compra_total_mun <- compra_total_mun |>
+compra_total <- compra_total |>
   group_by(CPRO) |> 
   mutate(
     OtroDifProv = Otro21Prov - Otro11Prov) |> 
   ungroup()
 
-compra_total_mun %>%
+compra_total %>%
+    distinct(OtroDifProv, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifProv)) %>%
+    select(OtroDifProv, PROV_LITERAL, CCAA)
+```
+
+### Por CCAA
+
+```{r}
+
+#  Propiedad
+compra_total <- compra_total |>
+  group_by(CCAA) |> 
+  mutate(
+    PropiedadDifCCAA = Propiedad21CCAA - Compra11CCAA) |> 
+  ungroup()
+
+compra_total %>%
+    distinct(PropiedadDifCCAA, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifCCAA)) %>%
+    select(PropiedadDifCCAA, CCAA)
+
+# Alquiler
+compra_total <- compra_total |>
+  group_by(CCAA) |> 
+  mutate(
+    AlquilerDifCCAA = Alquiler21CCAA - Alquiler11CCAA) |> 
+  ungroup()
+
+compra_total %>%
+    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifProv)) %>%
+    select(AlquilerDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
+
+# Otro
+compra_total <- compra_total |>
+  group_by(CCAA) |> 
+  mutate(
+    OtroDifProv = Otro21Prov - Otro11Prov) |> 
+  ungroup()
+
+compra_total %>%
     distinct(OtroDifProv, .keep_all = TRUE) |> 
   arrange(desc(OtroDifProv)) %>%
     select(OtroDifProv, MUN_LITERAL, PROV_LITERAL, CMUN)
+
 ```
 
-
+-   Preparar todos los análisis claramente, pero NO HACERLOS. Dejarlo cuando esté perfe
+-   Cómo defino bien sólo COMPRA
+-   Preparar el resto de variables para hacer clusters/variabilidad
 
 analizar los municinipios..
 
 Hacer el analisis de componentes pero con las varibales que hablamos y con este perfil de solo compra (?)
 
+### mapa diferencia provincias
 
+```{r, fig.height=6, fig.width=12}
+# Mapa por provincias PROPIEDAD
+
+library(mapSpain)
+
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- compra_total |> 
+  select(CPRO, PropiedadDifProv)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+  
+mapa_propiedad_prov <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = PropiedadDifProv), color = "black", size = 1) + 
+    geom_sf_text(data = mapa, aes(label = round(PropiedadDifProv, 1)), color = "black", size = 3, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Difference of young people bought houses from 2011 to 2021 by province") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6))+ 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0)
+
+mapa_propiedad_prov
+
+
+```

@@ -4,17 +4,23 @@ format: html
 editor: visual
 ---
 
+## Paquetes
+
 ```{r}
 library(tidyverse)
 library(readxl)
 library(haven)
+library(mice)
+
 ```
 
 ## Municipios: Base de datos inicial
 
 ```{r}
 
-municipios <- read_sav("Microdatos2011/Personas/poblacion_2011_v2.sav") |> 
+microdatos2011 <- read_sav("Microdatos2011/Personas/poblacion_2011_v2.sav")
+
+municipios <- microdatos2011 |> 
   select(CPRO, CMUN)
 
 # Crear los códigos cusec de los municipios no especificados
@@ -46,6 +52,12 @@ nombres_provincias <- locations |>
   distinct(CPRO, .keep_all = TRUE)
 
 nombres_municipios <- rbind(nombres_municipios, df_rural)
+
+ccaas <- data.frame(
+  CodigoProvincia = c("01", "02", "03", "04", "33", "05", "06", "08", "09", "10", "11", "39", "12", "13", "14", "16", "17", "18", "19", "20", "21", "22", "23", "07", "24", "15", "35", "25", "26", "27", "28", "29", "30", "31", "32", "34", "36", "37",
+"38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52"),
+  
+  CCAA = c("País Vasco", "Castilla-La Mancha", "Comunidad Valenciana", "Andalucía", "Asturias", "Castilla y León", "Extremadura", "Cataluña", "Castilla y León", "Extremadura", "Andalucía", "Cantabria", "Comunidad Valenciana", "Castilla-La Mancha", "Andalucía", "Castilla-La Mancha", "Cataluña", "Andalucía", "Castilla-La Mancha", "País Vasco", "Andalucía", "Aragón", "Andalucía", "Islas Baleares", "Castilla y León", "Galicia", "Canarias", "Cataluña", "La Rioja", "Galicia", "Comunidad de Madrid", "Andalucía", "Comunidad de Murcia", "Comunidad Foral de Navarra", "Galicia", "Castilla y León", "Galicia", "Castilla y León", "Canarias", "Cantabria", "Castilla y León", "Andalucía", "Castilla y León", "Cataluña", "Aragón", "Castilla-La Mancha", "Comunidad Valenciana", "Castilla y León", "País Vasco", "Castilla y León", "Aragón", "Ceuta", "Melilla"))
   
 # Añadir nombres de provincias y municipios
 municipios <- municipios |> 
@@ -62,6 +74,104 @@ municipios <- municipios |>
   left_join(ccaas, by = c("CPRO" = "CodigoProvincia")) |> 
 
   distinct(cusec, .keep_all = T)
+
+
+```
+
+## Municipios rurales: codificar
+
+Decido perder los datos concretos de los municipios de 10-20 mil habitantes de 2021. Estos se agruparán en la etiqueta de 10-20k. Así, no perdemos estos municipios como tal, sino que los agrupamos en la misma categoría que en 2011 y podemos compararlos.
+
+```{r}
+
+load("Microdatos2021/Personas/R/CensoPersonas_2021.RData")
+
+microdatos2021 <- Microdatos
+
+mun21 <- microdatos2021 |> 
+  select(CPRO, CMUN) |>    
+  mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+  distinct(cusec)
+
+
+mun11 <- microdatos2011 |> 
+  select(CPRO, CMUN) |> 
+   mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |>
+   mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+  distinct(cusec)
+
+# These are the municipalities lost from 2021 to 2011. 
+# Municipalities from 10000 to 20000 inhabitants
+municipios994 <- mun21 |> 
+  anti_join(mun11, by = "cusec") |> 
+  mutate(cusec_994 = cusec)
+
+mun_994 <- municipios994 |> 
+  mutate(cusec = paste0(substr(cusec, 1, 2), "994")) 
+
+
+```
+
+Ahora, para los municipios de databases externas, debemos agruparlas en 991, 992, 993 y 944 según la población. En 2021 y 2011 es igual el número de observaciones, podría usar sólo una de estas databases, pero prefiero usar 2. La de 2011 para databases externas de 2011 y la de 2021 para databases externas de 2021.
+
+```{r}
+
+# 2011
+poblacion_mun11 <- read_xls("Población/pobmun11.xls")
+
+poblacion_mun11 <- poblacion_mun11 |> 
+  setNames(poblacion_mun11[1, ]) |> 
+      slice(-1) |> 
+    select(-c(MUJERES, VARONES)) |> 
+  rename(Poblacion2011 = `AMBOS SEXOS`) |> 
+    mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) 
+
+cusec_rural_2011 <- poblacion_mun11 |> 
+  mutate(Poblacion2011 = as.numeric(Poblacion2011)) |> 
+  filter(Poblacion2011 < 20000) |> 
+  mutate(cusec_original = cusec,
+    cusec = case_when(
+      Poblacion2011 < 2000 ~ paste0(substr(cusec_original, 1, 2), "991"),
+      Poblacion2011 < 5000 ~ paste0(substr(cusec_original, 1, 2), "992"),
+      Poblacion2011 < 10000 ~ paste0(substr(cusec_original, 1, 2), "993"),
+      Poblacion2011 < 20000 ~ paste0(substr(cusec_original, 1, 2), "994"),
+      TRUE ~ cusec
+    )
+  )
+
+cusec_rural_2011 <- cusec_rural_2011 |> 
+  distinct(cusec_original, .keep_all = TRUE) |> 
+  select(cusec_original, cusec)
+
+
+# 2021
+poblacion_mun21 <- read_xlsx("Población/pobmun21.xlsx")
+
+poblacion_mun21 <- poblacion_mun21 |> 
+  setNames(poblacion_mun21[1, ]) |> 
+      slice(-1) |> 
+    select(-c(MUJERES, HOMBRES)) |> 
+  rename(Poblacion2021 = `POB21`) |> 
+    mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) 
+
+cusec_rural_2021 <- poblacion_mun21 |> 
+  mutate(Poblacion2021 = as.numeric(Poblacion2021)) |> 
+  filter(Poblacion2021 < 20000) |> 
+  mutate(cusec_original = cusec,
+    cusec = case_when(
+      Poblacion2021 < 2000 ~ paste0(substr(cusec_original, 1, 2), "991"),
+      Poblacion2021 < 5000 ~ paste0(substr(cusec_original, 1, 2), "992"),
+      Poblacion2021 < 10000 ~ paste0(substr(cusec_original, 1, 2), "993"),
+      Poblacion2021 < 20000 ~ paste0(substr(cusec_original, 1, 2), "994"),
+      TRUE ~ cusec
+    )
+  )
+
+cusec_rural_2021 <- cusec_rural_2021 |> 
+  distinct(cusec_original, .keep_all = TRUE) |> 
+  select(cusec_original, cusec)
 
 
 ```
@@ -83,15 +193,18 @@ De cara al análisis de componentes o clusters de los municipios, preparo una ta
 -   Índice de Precios de Vivienda (CCAA)
 
 -   Renta por municipio
--   Porcentaje de población joven
--   Municipio rural o urbano
--   Porcentaje de viviendas vacías
--   Porcentaje de viviendas secundarias
 
+-   Porcentaje de población joven
+
+-   Municipio rural o urbano
+
+-   Porcentaje de viviendas vacías
+
+-   Porcentaje de viviendas secundarias
 
 ### Índice de Precios de Vivienda en Alquiler
 
-A nivel de municipio.
+A nivel de municipio, mayores de 10000 habitantes. Pierdo info de municipios menos de 10k. Imputarlos?
 
 ```{r}
 
@@ -108,6 +221,16 @@ ipva <- ipva |>
   rename(ipva2021 = "2021", ipva2011 = "2011") |> 
   select(-MUN_LITERAL)
 
+# Agrupar municipios pequeños
+ipva <- ipva |> 
+  left_join(cusec_rural_2011, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(ipva2021 = mean(ipva2021),
+            ipva2011 = mean(ipva2011)) |> 
+  ungroup()
 
 municipios <- municipios |> 
   left_join(ipva, by = "cusec") |> 
@@ -122,13 +245,27 @@ A nivel de CCAA.
 ```{r}
 
 ipv <- read_xlsx("Índice precios vivienda/ipv.xlsx") |> 
-  rename(ipv2021 = "2021T2", ipv2011 = "2011T2", tipoipv=Tipo)
+  rename(ipv2021 = "2021T2", ipv2011 = "2011T2", tipoipv=Tipo) |> pivot_wider(names_from = tipoipv, 
+              values_from = c(ipv2021, ipv2011),
+              names_sep = "") |> 
+  rename_with(~ gsub("ipv2021_", "", .x), starts_with("ipv2021")) |> 
+  rename_with(~ gsub("ipv2011_", "", .x), starts_with("ipv2011")) |> 
+  rename(
+    ipv2021General = ipv2021General,
+    ipv2021Nueva = `ipv2021Vivienda nueva`,
+    ipv2021Segunda = `ipv2021Vivienda segunda mano`,
+    ipv2011General = ipv2011General,
+    ipv2011Nueva = `ipv2011Vivienda nueva`,
+    ipv2011Segunda = `ipv2011Vivienda segunda mano`) |>             mutate(CCAA = case_when(
+    CCAA == "Región de Murcia" ~ "Comunidad de Murcia",
+    CCAA == "Principado de Asturias" ~ "Asturias",
+    TRUE ~ CCAA))
+
 
 municipios <- municipios |> 
   left_join(ipv, by = "CCAA") |> 
   select(-ccaa) |> 
   distinct(cusec, .keep_all = T)
-
 
 ```
 
@@ -136,7 +273,9 @@ municipios <- municipios |>
 
 Obtengo los datos de la web de Agencia Tributaria, lo guardo en un .csv y lo limpio a partir de ahí.
 
-```{r, results=hide, echo=FALSE}
+A partir de 1000 habitantes.
+
+```{r, echo=FALSE}
 
 #library(rvest)
 
@@ -151,25 +290,114 @@ Obtengo los datos de la web de Agencia Tributaria, lo guardo en un .csv y lo lim
 #tabla_data <- tabla_data[[1]]
 
 # Guardar archivo .csv
+#library(writexl)
 
-#write.csv(tabla_data, "rentamunicipios.csv")
+#write_xlsx(tabla_data, "rentamunicipios.xlsx")
 
 ```
 
 ```{r}
 
-renta <- read_csv("Renta por municipios/rentamunicipios.csv")
+suppressWarnings({
+renta <- read_xlsx("Renta por municipios/rentamunicipios.xlsx")
+})
 
 renta <- renta |> 
-  rename(MUN_LITERAL =...2) |> 
-  select(MUN_LITERAL, `RENTA DISPONIBLEMEDIANA`) |> 
+  rename(MUN_LITERAL =...1) |> 
+  select(MUN_LITERAL, `RENTA DISPONIBLEMEDIA`) |> 
   mutate(cusec = as.character(gsub("[^0-9]", "", MUN_LITERAL)),
          MUN_LITERAL = gsub("[0-9-]", "", MUN_LITERAL),
-         `RENTA DISPONIBLEMEDIANA` = gsub("\\.", "", `RENTA DISPONIBLEMEDIANA`)) |> 
+         `RENTA DISPONIBLEMEDIA` = gsub("\\.", "", `RENTA DISPONIBLEMEDIA`)) |> 
   filter(nchar(cusec) >= 2) |> 
   select(-MUN_LITERAL) |> 
-  rename(RentaMediana = `RENTA DISPONIBLEMEDIANA`) |> 
-    mutate(cusec = as.character(cusec), cusec = as.numeric(cusec))
+  rename(RentaMedia2021 = `RENTA DISPONIBLEMEDIA`) |> 
+  mutate(RentaMedia2021 = as.numeric(RentaMedia2021)) |> 
+  mutate(RentaMedia2021 = str_pad(RentaMedia2021, width = 5, side = "right", pad = "0")) |> 
+  mutate(RentaMedia2021 = as.numeric(RentaMedia2021)) |> 
+  filter(nchar(cusec) == 5)
+
+# Agrupar municipios pequeños
+renta <- renta |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(RentaMedia2021 = mean(RentaMedia2021)) |> 
+  ungroup() |> 
+    mutate(RentaMedia2021 = as.numeric(gsub("\\..*", "", RentaMedia2021)))
+
+
+```
+
+### Renta Navarra
+
+Renta neta media por persona - similar a los datos de agencia tributaria
+
+https://nastat.navarra.es/es/tablas_powerbi/-/tag/estadistica-renta
+
+```{r}
+
+renta_navarra <- read_xlsx("Renta por municipios/rentanavarra.xlsx")
+
+renta_navarra <- renta_navarra |> 
+  select(c(1, 4)) |>   
+  rename(cusec = "Año", RentaMedia2021 = "2021...4") %>%
+  slice(4:n()) |> 
+  mutate(RentaMedia2021 = round(as.numeric(RentaMedia2021), 0),
+        cusec = paste0("31", cusec)) |> 
+  distinct(cusec, .keep_all = T)
+
+# Agrupar municipios pequeños
+renta_navarra <- renta_navarra |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(RentaMedia2021 = round(mean(RentaMedia2021), 0)) |> 
+  ungroup() |> 
+    distinct(cusec, .keep_all = TRUE) |> 
+  slice(1:7)
+
+renta <- rbind(renta, renta_navarra)
+
+```
+
+### Renta País Vasco
+
+Renta personal media disponible. https://www.eustat.eus/elementos/ele0005700/renta-personal-media-de-la-c-a-de-euskadi-por-ambitos-territoriales-segun-tipo-de-renta-euros/tbl0005790_c.html
+
+```{r}
+renta_pv <- read_xlsx("Renta por municipios/rentapv.xlsx")
+
+# Clean data
+renta_pv <- renta_pv |> 
+  select(c(1, 8)) |>   
+  rename(NOMBRE = "Renta personal media de la C. A. de Euskadi por ámbitos territoriales, según tipo de renta (euros). 2021", RentaMedia2021 = "...8") |> 
+  slice(32:n()) |> 
+  mutate(RentaMedia2021 = round(as.numeric(RentaMedia2021), 0)) |> 
+  mutate(NOMBRE = gsub(" / ", "/", NOMBRE)) |> 
+  mutate(NOMBRE = case_when(
+    NOMBRE == "Leintz Gatzaga" ~ "Leintz-Gatzaga",
+    NOMBRE == "Ribera Baja/Erribera Beitia" ~ "Erriberabeitia",
+    TRUE ~ NOMBRE))
+
+# Añadir cusec a todos los municipios vascos 
+renta_pv <- renta_pv |> 
+  left_join(select(poblacion_mun21, NOMBRE, cusec), by = "NOMBRE") |> 
+  filter(!is.na(RentaMedia2021)) |> 
+  select(-NOMBRE)
+
+# Agrupar municipios pequeños
+renta_pv <- renta_pv |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(RentaMedia2021 = round(mean(RentaMedia2021), 0)) |> 
+  ungroup() |> 
+    distinct(cusec, .keep_all = TRUE)
+
+renta <- rbind(renta, renta_pv)
 
 municipios <- municipios |> 
   left_join(renta, by = "cusec") |> 
@@ -182,82 +410,151 @@ municipios <- municipios |>
 Menor de 35 años. Los microdatos son una muestra del 10%, con lo cual no tendré los datos exactos de población (o podría estimarlos multiplicando por 10).
 
 ```{r}
-
-load("Microdatos2021/Personas/R/CensoPersonas_2021.RData")
-
-microdatos2021 <- Microdatos
-
 poblacion2021 <- microdatos2021 |> 
   select(CPRO, CMUN, VAREDAD) |> 
   mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
   group_by(cusec) |> 
   mutate(Población2021 = n()) |> 
+  ungroup()
+
+poblacion2021 <-  poblacion2021 |> 
   filter(VAREDAD >= 0 & VAREDAD <= 35) |>  
-  mutate(PorcentajeJoven2021 = n() / n() * 100) |> 
+  group_by(cusec) |> 
+  mutate(PoblaciónJoven2021 = n()) |> 
+  mutate(PorcentajeJoven2021 = round((PoblaciónJoven2021 / Población2021) * 100, 2)) |> 
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(cusec, PorcentajeJoven2021)    
+
+# Agrupar municipios pequeños
+poblacion2021 <-  poblacion2021 |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(PorcentajeJoven2021 = mean(PorcentajeJoven2021)) |> 
   ungroup() |> 
-  distinct(cusec, .keep_all = TRUE)
+    mutate(PorcentajeJoven2021 = round(PorcentajeJoven2021, 2))  
 
-microdatos2011 <- read_sav("Microdatos2011/Personas/poblacion_2011_v2.sav")
 
+# 2011
 poblacion2011 <- microdatos2011 |> 
   select(CPRO, CMUN, EDAD) |> 
-  mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+  mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |>
+   mutate(
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
   group_by(cusec) |> 
   mutate(Población2011 = n()) |> 
-  filter(EDAD >= 0 & EDAD <= 35) |> 
-  mutate(PorcentajeJoven2011 = n() / n() * 100) |> 
-  ungroup() |>  
-  distinct(cusec, .keep_all = TRUE)
+  ungroup()
 
+poblacion2011 <-  poblacion2011 |> 
+  filter(EDAD >= 0 & EDAD <= 35) |> 
+  group_by(cusec) |> 
+  mutate(PoblaciónJoven2011 = n()) |> 
+  mutate(PorcentajeJoven2011 = round((PoblaciónJoven2011 / Población2011) * 100, 2)) |> 
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(cusec, PorcentajeJoven2011)    
+
+# Dif
+# Juntar datos 2021 y 2011
+poblacion2011 <- poblacion2011 |> 
+  left_join(poblacion2021, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
+
+# Crear variable 
+poblacion2011 <- poblacion2011 |> 
+  mutate(PorcentajeJovenDif = PorcentajeJoven2021 - PorcentajeJoven2011)
+
+# Juntar las 3 variables
+municipios <- municipios |> 
+  left_join(poblacion2011, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
 
 ```
 
 ### Rural o urbano
-Realmente esto solo mide la población de más o menos 20000 habitantes. Pero he visto que hasta en en un informe llamado DEMOGRAFÍA DE LA POBLACIÓN RURAL del Ministerio, "la cual 
-clasifica un municipio como rural si tiene menos de 30.000 habitantes y menos de 100 habitantes por km2". Aquí voy a usar 20.000 habitantes y no veré la densidad de población.
+
+Realmente esto solo mide la población de más o menos 20000 habitantes. Pero he visto que hasta en en un informe llamado DEMOGRAFÍA DE LA POBLACIÓN RURAL del Ministerio, "la cual clasifica un municipio como rural si tiene menos de 30.000 habitantes y menos de 100 habitantes por km2". Aquí voy a usar 20.000 habitantes y no veré la densidad de población.
 
 En principio, calcularlo del 2011 está bien porque en 2011 hay menos municipios porque también 'censura' los de 10k a 20k habitantes.
+
 ```{r}
 
 habitat <- microdatos2011 |>
-  select(CPRO, CMUN) |> 
-  mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+  mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |>
+   mutate(
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN)) |> 
    mutate(
      HABITAT = case_when(
        CMUN %in% c(991, 992, 993, 994) ~ "Rural",
-       TRUE ~ "Urbano"))
+       TRUE ~ "Urbano")) |> 
+  select(HABITAT, cusec) |> 
+  distinct(cusec, .keep_all = T)
 
+municipios <- municipios |> 
+  left_join(habitat, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
 
 ```
 
 ### Viviendas vacías
 
-En 2011 es muy claro, porque se clasifican como tal. En 2021 sólo hay viviendas no principales. Ésto sale de una tabla prefabricada del INE https://www.ine.es/jaxi/Tabla.htm?tpx=59531&L=0
+En los microdatos del 2011 es muy claro, porque se clasifican como tal. En 2021 sólo hay viviendas no principales. Ésto sale de una tabla prefabricada del INE https://www.ine.es/jaxi/Tabla.htm?tpx=59531&L=0
+
+No salen en 2021 los 991, 992. Salen los municipios enteros. Tengo que elegir o sacrificar los municipios rurales o ponerles 991, 992, 993... a los municipios que lo sean, uno a uno.
+
 ```{r}
 
-vacias2021 <- read_xlsx("Vacias/vacias2021.xlsx") 
+vacias2021 <- read_xlsx("Vacias/vacias2021.xlsx")
 
 vacias2021 <- vacias2021 |> 
   mutate(
     cusec = as.character(substring(MUN_LITERAL, 1, 5)), 
-    MUN_LITERAL = gsub("\\d+\\s", "", MUN_LITERAL))
+    MUN_LITERAL = gsub("\\d+\\s", "", MUN_LITERAL)) |> 
+    mutate(PorcentajeVacias2021 = round((`Viviendas vacías` / `Viviendas totales`) * 100, 2)) |> 
+  select(cusec, PorcentajeVacias2021)
 
+# Agrupar municipios pequeños
+vacias2021 <- vacias2021 |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(PorcentajeVacias2021 = mean(PorcentajeVacias2021)) |>
+  ungroup() |> 
+    mutate(PorcentajeVacias2021 = round(PorcentajeVacias2021, 2)) 
 # 2011
 viviendas2011 <- read_sav("Microdatos2011/Viviendas/viviendas_2011_v1.sav")
 
 vacias2011 <- viviendas2011 |> 
   select(CPRO, CMUN, CVIVIF) |> 
-  filter(CVIVIF == 3) |>
   mutate(
     CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
-    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |>
    mutate(  
     CPRO = trimws(CPRO),
     CMUN = trimws(CMUN),
     cusec = paste0(CPRO, CMUN)) |> 
   group_by(cusec) |> 
+  mutate(ViviendasTotales = n()) |> 
+  filter(CVIVIF == 3) |>
   mutate(ViviendasVacias2011 = n()) |> 
+  mutate(PorcentajeVacias2011 = round((ViviendasVacias2011 / ViviendasTotales) * 100, 2)) |> 
+  select(cusec, PorcentajeVacias2011) |> 
   distinct(cusec, .keep_all = T)
+
+municipios <- municipios |> 
+  left_join(vacias2011, by = "cusec") |> 
+  distinct(cusec, .keep_all=T) |> 
+  left_join(vacias2021, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
 
 ```
 
@@ -271,19 +568,30 @@ viviendas2021 <- Microdatos
 
 secundarias2021 <- viviendas2021 |> 
     select(CPRO, CMUN, TIPO_VIV) |> 
-  filter(TIPO_VIV == 0) |> 
    mutate(  
     CPRO = trimws(CPRO),
     CMUN = trimws(CMUN),
     cusec = paste0(CPRO, CMUN)) |> 
   group_by(cusec) |> 
-  mutate(ViviendasSecundarias2021 = n()) |> 
-  distinct(cusec, .keep_all = T)
+  mutate(ViviendasTotales = n()) |>
+  filter(TIPO_VIV == 0) |> 
+  mutate(ViviendasSecundarias2021 = n()) |>
+    mutate(PorcentajeSecundarias2021 = round((ViviendasSecundarias2021 / ViviendasTotales) * 100, 2)) |>
+  select(cusec, PorcentajeSecundarias2021) |> 
+  distinct(cusec, .keep_all = T) 
 
+# Agrupar municipios pequeños
+secundarias2021 <- secundarias2021 |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(PorcentajeSecundarias2021 = mean(PorcentajeSecundarias2021)) |>
+  ungroup() |> 
+    mutate(PorcentajeSecundarias2021 = round(PorcentajeSecundarias2021, 2))  
 
 secundarias2011 <- viviendas2011 |> 
   select(CPRO, CMUN, CVIVIF) |> 
-  filter(CVIVIF == 2) |>
   mutate(
     CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
     CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |>
@@ -292,18 +600,682 @@ secundarias2011 <- viviendas2011 |>
     CMUN = trimws(CMUN),
     cusec = paste0(CPRO, CMUN)) |> 
   group_by(cusec) |> 
-  mutate(ViviendasSecundarias2011 = n()) |> 
+  mutate(ViviendasTotales = n()) |>
+  filter(CVIVIF == 2) |>
+  mutate(ViviendasSecundarias2011 = n()) |>
+    mutate(PorcentajeSecundarias2011 = round((ViviendasSecundarias2011 / ViviendasTotales) * 100, 2)) |>
+  select(cusec, PorcentajeSecundarias2011) |> 
   distinct(cusec, .keep_all = T)
 
+municipios <- municipios |> 
+  left_join(secundarias2011, by = "cusec") |> 
+  distinct(cusec, .keep_all=T) |> 
+  left_join(secundarias2021, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
 
 ```
 
-### Viviendas turísticas
+### Viviendas turísticas 2021
+
+Hay que quitar NA de secciones. Sino me cargo municipios enteros como Badajoz.
+
+```{r}
+
+turismo <- read_excel("vivienda turística/exp_viv_turistica_tabla5_FEB2021.xlsx", sheet = 3, na = "Dato protegido por secreto estadístico.")
+
+turismo <- turismo |> 
+  rename(CPRO = PROV, cusec = MUN)|>
+  group_by(cusec) |> 
+  filter(!is.na(`PORCENTAJE VIVIENDA TURISTICA`)) |> 
+  mutate(PorcentajeTurísticas2021 = round(mean(`PORCENTAJE VIVIENDA TURISTICA`), 2)) |> 
+  select(cusec, PorcentajeTurísticas2021) |> 
+  distinct(cusec, .keep_all = TRUE)
+
+# Agrupar municipios pequeños
+turismo <- turismo |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(PorcentajeTurísticas2021 = mean(PorcentajeTurísticas2021)) |>
+  ungroup() |> 
+    mutate(PorcentajeTurísticas2021 = round(PorcentajeTurísticas2021, 2))  
+
+municipios <- municipios |> 
+  left_join(turismo, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
+
+```
+
+### Diferencia entre 2021 y 2011
+
+```{r}
+
+# Definir databases
+# 2011
+compra11 <- microdatos2011 |> 
+  select(CPRO, CMUN, EDAD, ANAC, NORDEN, ANORES, ANOM, LTRABA, MUNTRABA, TENEN, CON_NORDEN, OPA_NORDEN, TIPOPER, ESTHOG, EDADPAD, EDADMAD) 
+
+compra11 <- compra11 |> 
+  filter(EDAD %in% c(18:35), # Jóvenes
+         TIPOPER != "H", # Que no son hijos en el núcleo
+         is.na(EDADPAD), # Que no conviven con el padre
+         is.na(EDADMAD)) |> # Que no conviven con la madre 
+    select(-EDADPAD, -EDADMAD) |> 
+  filter(ESTHOG %in% c(01, 02, 05, 07, 08, 10, 11)) # No es un hogar con una persona sola de +65 años ni hijos de más de 25
+
+compra11 <- compra11 |> 
+  mutate(mayor = ifelse(ANORES - ANAC > 18, TRUE, FALSE)) |> 
+  filter(mayor == TRUE) # Que era mayor de edad en la última mudanza
+  
+compra11 <- compra11 |> 
+  filter(NORDEN %in% c(1, 2)) # Que es orden 1 o 2 en el núcleo
+
+#Recodificar tenen viv
+compra11 <- compra11 |>  
+  mutate(
+    TENEN_r = case_when(
+      TENEN == 1 ~ "Propiedad por compra, pagada",
+      TENEN == 2 ~ "Propiedad por compra, pagos pendientes",
+      TENEN == 3 ~ "Propiedad por herencia o donación",
+      TENEN == 4 ~ "Alquiler",
+      TENEN == 5 ~ "Cedida o a bajo precio",
+      TENEN == 6 ~ "Otro")) |> 
+  mutate(
+    TENEN_VIV = case_when(
+      TENEN_r %in% c("Propiedad por compra, pagada", "Propiedad por compra, pagos pendientes") ~ "Compra",
+      TENEN_r == "Propiedad por herencia o donación" ~ "Herencia o donación",
+      TENEN_r == "Alquiler" ~ "Alquiler",
+      TENEN_r %in% c("Cedida o a bajo precio", "Otro") ~ "Otro"))
+
+# Poner cusec
+compra11 <- compra11 |>  
+  mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
+   mutate(  
+    CPRO = trimws(CPRO),
+    CMUN = trimws(CMUN),
+    cusec = paste0(CPRO, CMUN))
+
+
+# 2021
+compra21 <- microdatos2021 |> 
+  select(CPRO, CMUN, VAREDAD, ANAC, TENEN_VIV, NORDEN, RESI_NACIM, VARANORES, VARANOM, CMUN_ANT, CMUN_UNANO, RESI_UNANO, CMUN_DANO, RESI_DANO, LTRAB, CMUN_TRAB, LEST, CMUN_EST, NORDEN_CON, NORDEN_OPA, TIPOPER, SEXO_MAD, SEXO_PAD, ESTRUC_HOG) 
+
+compra21 <- compra21 |> 
+  filter(VAREDAD %in% c(18:35), # Jóvenes
+         TIPOPER != "H", # Que no son hijos en el núcleo
+         SEXO_PAD == "N", # Que no conviven con el padre
+         SEXO_MAD == "N") |>  # Que no conviven con la madre
+  mutate(ESTRUC_HOG = as.numeric(ESTRUC_HOG)) |> 
+  filter(ESTRUC_HOG %in% c(01, 02, 05, 07, 08, 10, 11)) # No es un hogar con una persona sola de +65 años ni hijos de más de 25
+
+# Filtrar para haberse mudado a otra vivienda con mínimo 18 años, en una forma amplia
+
+compra21 <- compra21 |> 
+  mutate(
+    VARANORES_r = case_when(
+      VARANORES == "0005" ~ as.numeric(2015),
+      VARANORES == "0004" ~ as.numeric(2010),
+      VARANORES %in% c("9999", "0003") ~ as.numeric(2000), 
+      VARANORES == " " ~ NA,
+      TRUE ~ as.numeric(VARANORES)),
+      ANAC = as.numeric(ANAC),
+      mayor = ifelse(VARANORES_r - ANAC > 18, TRUE, FALSE)) |> 
+  filter(mayor == TRUE)
+
+compra21 <- compra21 |> 
+  filter(NORDEN %in% c("01", "02")) # Que es orden 1 o 2 en el núcleo
+
+# Recodificar código de tenencia
+compra21 <- compra21 |> 
+    mutate(
+    TENEN_VIV = case_when(
+      TENEN_VIV == 2 ~ "Propiedad",
+      TENEN_VIV == 3 ~ "Alquiler",
+      TENEN_VIV == 4 ~ "Otro")) 
+
+# Poner cusec
+compra21 <- compra21 |> 
+  mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN))
+
+# Crear variables por año -----------------------------------
+# 2011
+# Por municipio
+compra11 <- compra11 |> 
+  group_by(cusec) |> 
+  mutate(
+    Compra11Mun = round((sum(TENEN_VIV == "Compra") / n()) * 100, 2),
+    Herencia11Mun = round((sum(TENEN_VIV == "Herencia o donación") / n()) * 100, 2),
+    Alquiler11Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro11Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |> 
+  ungroup()
+
+# 2021
+# Por municipio
+compra21 <- compra21 |> 
+  group_by(cusec) |> 
+  mutate(
+    Propiedad21Mun = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |> 
+  ungroup()
+
+# Juntar pequeños municipios
+compra21 <- compra21 |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(Propiedad21Mun = round(mean(Propiedad21Mun), 2),
+            Alquiler21Mun = round(mean(Alquiler21Mun), 2),
+            Otro21Mun = round(mean(Otro21Mun), 2)) |> 
+  ungroup() 
+
+
+# Crear diferencia -------------------------
+tenencia11 <- compra11 |> 
+  select(cusec, Compra11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun) |> 
+    distinct(cusec, .keep_all = T)
+
+tenencia21 <- compra21 |> 
+  select(cusec, Propiedad21Mun, Alquiler21Mun, Otro21Mun) |> 
+  distinct(cusec, .keep_all = T)
+
+tenencias <- tenencia11 |> 
+  left_join(tenencia21, by = "cusec")
+
+# Propiedad
+tenencias <- tenencias |> 
+  mutate(
+    PropiedadDifMun = Propiedad21Mun - Compra11Mun)
+
+# Alquiler
+tenencias <- tenencias |> 
+  mutate(
+    AlquilerDifMun = Alquiler21Mun - Alquiler11Mun)
+
+# Otro
+tenencias <- tenencias |> 
+  mutate(
+    OtroDifProv = Otro21Mun - Otro11Mun)
+
+municipios <- municipios |> 
+  left_join(tenencias, by = "cusec") |> 
+  distinct(cusec, .keep_all=T)
+
+```
+
+### Nacionalidad
+
+```{r}
+
+nacionalidad <- microdatos2021 |> 
+   mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+    mutate(
+    NACIONALIDAD = case_when(
+      PNACIO == 108 ~ "Española",
+      PNACIO %in% c(102:199) ~ "Europea",
+      TRUE ~ "No europea")) |> 
+  group_by(cusec) |> 
+  mutate(PorcentajeEspañola = round(mean(NACIONALIDAD == "Española") * 100, 2),
+         PorcentajeEuropea = round(mean(NACIONALIDAD == "Europea") * 100, 2),
+         PorcentajeNoEuropea = round(mean(NACIONALIDAD == "No europea") * 100, 2)) |> 
+  ungroup() |> 
+  distinct(cusec, .keep_all = T) |> 
+  select(cusec, PorcentajeEspañola, PorcentajeEuropea, PorcentajeNoEuropea)
+
+# Agrupar municipios pequeños
+nacionalidad <- nacionalidad |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(PorcentajeEspañola = round(mean(PorcentajeEspañola), 2),
+            PorcentajeEuropea = round(mean(PorcentajeEuropea), 2),
+            PorcentajeNoEuropea = round(mean(PorcentajeNoEuropea), 2)) |> 
+  ungroup() 
+
+municipios <- municipios |> 
+  left_join(nacionalidad, by = "cusec")
+```
+
+## Precios metro alquiler
+
+Mejor que el IPVA, poqrue el IPVA no puedo encontrr algo exactamente equivalente para PV y N. Además parece que tiene datos de TODOS los municipios. Es por metro construido.
+
+https://www.mivau.gob.es/vivienda/alquila-bien-es-tu-derecho/serpavi
+
+Datos obtenidos de Navarra en https://www.indomio.es/mercado-inmobiliario/comunidad-foral-de-navarra/
+
+No hay datos de municipios de Cádiz ni de Murcia de menos de 2000 habitantes.
+
+```{r}
+
+alq <- read_xlsx("Precios alquiler/preciosalquiler.xlsx", sheet = 4)
+
+# Select columns I want
+alq <- alq |> 
+  select(CPRO, CUMUN, LITMUN, ALQM2MES_LV_M_VC_21, ALQM2MES_LV_M_VU_21, ALQTBID12_M_VC_21, ALQTBID12_M_VU_21) |> 
+  rename(MUN_LITERAL = LITMUN,
+         cusec = CUMUN, 
+         alq_m2_mediano_vc_21 = ALQM2MES_LV_M_VC_21,
+         alq_m2_mediano_vu_21 = ALQM2MES_LV_M_VU_21,
+         alq_mediano_vc_21 = ALQTBID12_M_VC_21,
+         alq_mediano_vu_21 = ALQTBID12_M_VU_21) |>
+# Si falta datos de vivienda colectiva o unipersonal, usa el mismo valor de una de ellas. Elimina los casos cuando falta ambos
+    mutate(
+    alq_m2_mediano_vc_21 = coalesce(alq_m2_mediano_vc_21, alq_m2_mediano_vu_21),
+    alq_m2_mediano_vu_21 = coalesce(alq_m2_mediano_vu_21, alq_m2_mediano_vc_21)) |>
+    mutate(
+    alq_mediano_vc_21 = coalesce(alq_mediano_vc_21, alq_mediano_vu_21),
+    alq_mediano_vu_21 = coalesce(alq_mediano_vu_21, alq_mediano_vc_21)) |> 
+  filter(!is.na(alq_mediano_vc_21) | !is.na(alq_mediano_vu_21))
+
+# Agrupar municipios pequeños
+alq <- alq |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  filter(!is.na(alq_m2_mediano_vc_21)) |> 
+  filter(!is.na(alq_mediano_vu_21)) |> 
+  group_by(cusec) |> 
+  summarise(PrecioAlquilerM2 = round(mean(c(alq_m2_mediano_vc_21, alq_m2_mediano_vu_21)), digits = 2)) |>  
+  ungroup() |> 
+  distinct(cusec, .keep_all = TRUE)
+
+```
+
+### Precio alquiler Navarra
+
+https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/alquiler/navarra/navarra/baranain/
+
+https://www.diariodenavarra.es/noticias/negocios/vivienda/2022/12/29/el-precio-vivienda-alquiler-sube-3-navarra-el-ultimo-ano-553031-3375.html
 
 ```{r}
 
 
+# Navarra
+cusec <- c("31201", "31232", "31901")
+PrecioAlquilerM2 <- as.numeric(c("9.5", "6.8", "9.2"))
+
+nav <- data.frame(cusec, PrecioAlquilerM2)
+
+#scrapear resto de municipios
+
+
 
 
 ```
 
+### Precio alquiler PV
+
+obtenido de https://www.elankidetza.euskadi.eus/contenidos/documentacion/informe_emal_2021t4/es_def/Informe-EMAL-anual-2021_cas.pdf
+
+La database está extraída de un informe. No existe una database pública como tal con los datos completos del informe. Por eso están así recogidos los datos. Los datos proceden de las 'áreas funcionales' de País Vasco, por lo que tengo que buscar a qué provincia pertenece cada grupo de 'municipios de menos de 2500 habitantes'. Por otra parte, la provincia de los 100 municipios restantes no hace falta buscarla, sino que los nombres son compatibles con la database con todos los municipios y su población (menos dos nombres, que se arreglan). Esto permite poder agruparlos fácilmente por población y asignarles un cusec para hacerlos compatibles con el resto de la base de datos.
+
+En esta fuente, agrupa los municipios de menos de 2500 habitantes por cada área funcional. Los he agrupado por provincia y los consideraré como municipios menores a 2000 habitantes.
+
+```{r}
+
+#Crear database a partir de informe
+alquiler_vasco <- tibble(
+  Municipio = c("Deba", "Eibar", "Elgoibar", "Ermua", "Mutriku", "Soraluze/Placencia de las Armas", "Municipios de menos de 2.500 habitantes", "Agurain/Salvatierra", "Alegría-Dulantzi", "Iruña Oka/Iruña de Oca", "Vitoria-Gasteiz", "Municipios de menos de 2.500 habitantes", "Balmaseda", "Güeñes", "Karrantza Harana/Valle de Carranza", "Sopuerta", "Zalla", "Municipios de menos de 2.500 habitantes", "Beasain", "Lazkao", "Legazpi", "Ordizia", "Urretxu", "Zumarraga", "Municipios de menos de 2.500 habitantes", "Abanto y Ciérvana-Abanto Zierbena", "Alonsotegi", "Arrigorriaga", "Barakaldo", "Basauri", "Berango", "Bilbao", "Derio", "Erandio", "Etxebarri", "Galdakao", "Getxo", "Gorliz", "Leioa", "Muskiz", "Ortuella", "Plentzia", "Portugalete", "Santurtzi", "Sestao", "Sondika", "Sopela", "Ugao-Miraballes", "Urduliz", "Valle de Trápaga-Trapagaran", "Zamudio", "Municipios de menos de 2.500 habitantes", "Andoain", "Astigarraga", "Donostia / San Sebastián", "Errenteria", "Hernani", "Hondarribia", "Irun", "Lasarte-Oria", "Lezo", "Oiartzun", "Pasaia", "Urnieta", "Usurbil", "Municipios de menos de 2.500 habitantes", "Abadiño", "Amorebieta-Etxano", "Berriz", "Durango", "Elorrio", "Iurreta", "Zaldibar", "Municipios de menos de 2.500 habitantes", "Bermeo", "Gernika-Lumo", "Lekeitio", "Markina-Xemein", "Ondarroa", "Municipios de menos de 2.500 habitantes", "Igorre", "Lemoa", "Municipios de menos de 2.500 habitantes", "Oyón-Oion", "Municipios de menos de 2.500 habitantes", "Amurrio", "Ayala/Aiara", "Laudio/Llodio", "Orozko", "Urduña/Orduña", "Municipios de menos de 2.500 habitantes", "Aretxabaleta", "Arrasate/Mondragón", "Bergara", "Eskoriatza", "Oñati", "Municipios de menos de 2.500 habitantes", "Bakio", "Mungia", "Municipios de menos de 2.500 habitantes", "Ibarra", "Tolosa", "Villabona", "Zizurkil", "Municipios de menos de 2.500 habitantes", "Azkoitia", "Azpeitia", "Getaria", "Orio", "Zarautz", "Zestoa", "Zumaia", "Municipios de menos de 2.500 habitantes"),
+  Precio_medio_m2 = c(7.2, 7.4, 6.5, 7.6, 6.6, 6.0, 6.6, 5.5, 6.5, NA, 8.5, 5.2, 6.9, 7.4, NA, NA, 6.9, NA, 7.3, 6.2, 5.9, 7.0, 6.4, 6.7, 5.7, 8.5, 8.1, 8.1, 9.7, 9.1, 9.6, 10.9, 8.6, 9.7, 9.1, 8.1, 11.1, 8.6, 10.2, 7.7, 8.4, 8.9, 9.4, 9.4, 9.0, 8.6, 9.8, 7.6, 9.4, 8.3, 8.3, 5.2, 8.0, 9.4, 11.9, 9.3, 8.4, 9.5, 8.6, 9.2, 8.7, 8.0, 9.5, 9.2, 8.4, 8.0, 7.3, 7.6, 6.9, 8.3, 6.6, 7.5, 6.0, NA, 6.3, 6.5, 6.9, 5.9, 6.9, 6.0, 5.9, 7.1, 5.9, 4.8, 4.8, 6.0, NA, 7.0, 5.3, 6.3, 5.7, 6.4, 7.4, 6.4, 6.7, 5.7, 5.5, 7.6, 7.9, 7.3, 6.8, 7.5, 6.8, 6.7, 6.4, 5.8, 5.7, 8.4, 8.1, 9.8, 6.1, 7.9, 5.9)) |> 
+  rename(NOMBRE = Municipio, PrecioAlquilerM2 = Precio_medio_m2) |>   mutate(NOMBRE = case_when(
+    NOMBRE == "Soraluze/Placencia de las Armas" ~ "Soraluze-Placencia de las Armas",
+    NOMBRE == "Donostia / San Sebastián" ~ "Donostia/San Sebastián",
+    TRUE ~ NOMBRE))
+
+# Mantener sólo los 'menos de 2500 habitantes' y filtrar los NA
+municipios_faltantes <- alquiler_vasco |> 
+  anti_join(poblacion_mun21, by = "NOMBRE") |> 
+  filter(!is.na(PrecioAlquilerM2))
+
+# Añadir provincia de éstos 
+municipios_faltantes$PROV_LITERAL <- c("Araba/Álava", "Bizkaia", "Bizkaia", "Gipuzkoa", "Bizkaia", "Bizkaia", "Bizkaia", "Araba/Álava", "Bizkaia", "Gipuzkoa", "Bizkaia", "Gipuzkoa", "Gipuzkoa")
+
+# Media por provincia
+municipios_faltantes <- municipios_faltantes |> 
+  group_by(PROV_LITERAL) |> 
+  summarize(PrecioAlquilerM2 =round(mean(PrecioAlquilerM2), 2)) |> 
+  ungroup()
+
+# Añadir cusec a municipios menos de 2500 habitantes
+municipios_faltantes$cusec <- c("01991", "48991", "20991")
+municipios_faltantes <- municipios_faltantes |> 
+  select(-PROV_LITERAL)
+
+# Añadir cusec a todos los municipios vascos 
+alquiler_vasco <- alquiler_vasco |> 
+  left_join(select(poblacion_mun21, NOMBRE, cusec), by = "NOMBRE") |> 
+    filter(!is.na(PrecioAlquilerM2)) |> 
+    filter(!is.na(cusec)) |> 
+  select(-NOMBRE)
+
+# Juntar ambas tablas
+alquiler_vasco <- rbind(alquiler_vasco, municipios_faltantes)
+
+# Agrupar municipios pequeños
+alquiler_vasco <- alquiler_vasco |> 
+  left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
+  mutate(cusec = coalesce(cusec.y, cusec)) |> 
+  select(-cusec.y) |> 
+  group_by(cusec) |> # Group all small mun together by province 
+  summarise(PrecioAlquilerM2 = round(mean(PrecioAlquilerM2), 2)) |> 
+  ungroup() |> 
+    distinct(cusec, .keep_all = TRUE)
+
+# Juntar todas las tablas de PV, Navarra y el resto
+alq <- rbind(alquiler_vasco, alq)
+
+
+municipios <- municipios |> 
+  left_join(alq, by = "cusec")
+
+
+```
+
+## Importe hipotecas por provincia
+
+Precio de hipoteca medio en 2021 por provincia, en miles de euros. De Viviendas, quitando fincas, solares...
+
+https://www.ine.es/jaxiT3/Tabla.htm?t=3200&L=0
+
+```{r}
+# Hipotecas 2021
+hipotecas <- read_xlsx("Hipotecas/hipotecas.xlsx")
+
+hipotecas <- hipotecas |> 
+  slice(-1) |> 
+  mutate(across(num_hipotecas2021M12:last_col(), as.numeric)) %>%
+  mutate(NumHipotecas2021 = rowSums(select(., num_hipotecas2021M12:num_hipotecas2021M01), na.rm = TRUE),
+         ImporteHipotecas2021 = rowSums(select(., importe_2021M12:importe_2021M01), na.rm = TRUE),
+         PrecioHipoteca2021Prov = round(ImporteHipotecas2021 / NumHipotecas2021 * 1000, 0)) |> 
+  select(PROV_LITERAL, NumHipotecas2021, ImporteHipotecas2021, PrecioHipoteca2021Prov) %>%
+  distinct() |> 
+  slice(1:(n() - 5)) |> 
+  mutate(CPRO = gsub("\\D", "", PROV_LITERAL),
+         PROV_LITERAL = gsub("\\d", "", PROV_LITERAL) |> trimws())  |> 
+  select(CPRO, PrecioHipoteca2021Prov)
+
+municipios <- municipios |> 
+  left_join(hipotecas, by = "CPRO")
+
+# Hipotecas 2011
+hipotecas2011 <- read_xlsx("Hipotecas/hipotecas2011.xlsx")
+
+hipotecas2011 <- hipotecas2011 |> 
+  slice(-1) |> 
+  mutate(across(num_hipotecas2011M12:last_col(), as.numeric)) %>%
+  mutate(NumHipotecas2011 = rowSums(select(., num_hipotecas2011M12:num_hipotecas2011M01), na.rm = TRUE),
+         ImporteHipotecas2011 = rowSums(select(., importe_2011M12:importe_2011M01), na.rm = TRUE),
+         PrecioHipoteca2011Prov = round(ImporteHipotecas2011 / NumHipotecas2011 * 1000, 0)) |> 
+  select(PROV_LITERAL, NumHipotecas2011, ImporteHipotecas2011, PrecioHipoteca2011Prov) %>%
+  distinct() |> 
+  slice(1:(n() - 5)) |> 
+  mutate(CPRO = gsub("\\D", "", PROV_LITERAL),
+         PROV_LITERAL = gsub("\\d", "", PROV_LITERAL) |> trimws())  |> 
+  select(CPRO, PrecioHipoteca2011Prov)
+
+# Juntar ambas tablas
+hipotecas <- hipotecas |> 
+  left_join(hipotecas2011, by = "CPRO")
+
+# Crear variable de diferencia entre años
+hipotecas <- hipotecas |> 
+  mutate(DifPrecioHipotecaProv = ((PrecioHipoteca2021Prov - PrecioHipoteca2011Prov) / PrecioHipoteca2011Prov) * 100) |>     mutate(DifPrecioHipotecaProv = round(DifPrecioHipotecaProv, 2))
+
+# Juntar con municipios
+municipios <- municipios |> 
+  left_join(hipotecas, by = "CPRO")
+
+
+```
+
+## Paro juvenil
+
+Tasa de paro en menores de 25 años por CCAA en 2021 y 2011
+
+https://www.ine.es/jaxiT3/Tabla.htm?t=4247&L=0
+
+```{r}
+# En 2021
+paro2021 <- read_xlsx("Paro juvenil/paroccaa2021.xlsx")
+
+paro2021 <- paro2021 |> 
+  slice(-c(1:8, (n() - 7):n())) |> 
+  rename(CCAA = 1, ParoJuvenil2021 = 2) |> 
+  mutate(ParoJuvenil2021 = as.numeric(ParoJuvenil2021),
+         CCAA = gsub("^\\d+\\s*", "", CCAA))
+
+paro2021 <- paro2021 |>    
+  mutate(CCAA = case_when(
+    CCAA == "Asturias, Principado de" ~ "Asturias",
+    CCAA == "Balears, Illes" ~ "Islas Baleares",
+    CCAA == "Castilla - La Mancha" ~ "Castilla-La Mancha",
+    CCAA == "Comunitat Valenciana" ~ "Comunidad Valenciana",
+    CCAA == "Madrid, Comunidad de" ~ "Comunidad de Madrid",
+    CCAA == "Murcia, Región de" ~ "Comunidad de Murcia",
+    CCAA == "Navarra, Comunidad Foral de" ~ "Comunidad Foral de Navarra",
+    CCAA == "Rioja, La" ~ "La Rioja",
+    TRUE ~ CCAA))
+
+# Juntar con municipios
+municipios <- municipios |> 
+  left_join(paro2021, by = "CCAA")
+
+# En 2011
+paro2011 <- read_xlsx("Paro juvenil/paroccaa2011.xlsx")
+
+paro2011 <- paro2011 |> 
+  slice(-c(1:8, (n() - 7):n())) |> 
+  rename(CCAA = 1, ParoJuvenil2011 = 2) |> 
+  mutate(ParoJuvenil2011 = as.numeric(ParoJuvenil2011),
+         CCAA = gsub("^\\d+\\s*", "", CCAA))
+
+paro2011 <- paro2011 |>    
+  mutate(CCAA = case_when(
+    CCAA == "Asturias, Principado de" ~ "Asturias",
+    CCAA == "Balears, Illes" ~ "Islas Baleares",
+    CCAA == "Castilla - La Mancha" ~ "Castilla-La Mancha",
+    CCAA == "Comunitat Valenciana" ~ "Comunidad Valenciana",
+    CCAA == "Madrid, Comunidad de" ~ "Comunidad de Madrid",
+    CCAA == "Murcia, Región de" ~ "Comunidad de Murcia",
+    CCAA == "Navarra, Comunidad Foral de" ~ "Comunidad Foral de Navarra",
+    CCAA == "Rioja, La" ~ "La Rioja",
+    TRUE ~ CCAA))
+
+# Juntar con municipios
+municipios <- municipios |> 
+  left_join(paro2011, by = "CCAA")
+
+
+```
+
+## Vivienda protegida
+
+Número de calificaciones provisionales a nivel de CCAA. Multiplico por 10 para calcular el total de viviendas porque los microdatos es una muestra del 10%.
+
+La variable de diferencia no es cuánto porcentaje ha disminuido la vivienda protegida en sí, sino cuánto ha disminuido el porcentaje de vivienda protegida a respecto del total en 2011 en comparación con 2021.
+
+<https://apps.fomento.gob.es/BoletinOnline2/?nivel=2&orden=34000000>
+
+```{r}
+
+# 2011
+protegida2011 <- read_xlsx("Vivienda protegida/viviendaprotegida.xlsx", sheet = "2011")
+
+protegida2011 <- protegida2011 |> 
+  slice(11:(nrow(protegida2011) - 8)) |> 
+    rename(
+    CCAA = ...1,
+    ProtegidaTotal2011 = ...2,
+    ProtegidaPropiedad2011 = ...3,
+    ProtegidaAlquiler2011 = ...4,
+    ProtegidaAutopromocion2011 = ...5) |> 
+  select(-...6) |> 
+  mutate(across(-CCAA, as.numeric)) |> 
+  mutate(CCAA = case_when(
+    CCAA == "Asturias (Principado de )" ~ "Asturias",
+    CCAA == "Balears (Illes)" ~ "Islas Baleares",
+    CCAA == "Comunitat Valenciana" ~ "Comunidad Valenciana",
+    CCAA == "Madrid (Comunidad de) (1)" ~ "Comunidad de Madrid",
+    CCAA == "Murcia (Región de)" ~ "Comunidad de Murcia",
+    CCAA == "Navarra (Comunidad Foral de)" ~ "Comunidad Foral de Navarra",
+    CCAA == "Rioja (La)" ~ "La Rioja",
+    TRUE ~ CCAA))
+
+
+# 2021  
+protegida2021 <- read_xlsx("Vivienda protegida/viviendaprotegida.xlsx", sheet = "2021")
+
+protegida2021 <- protegida2021 |> 
+  slice(11:(nrow(protegida2021) - 8)) |> 
+    rename(
+    CCAA = ...1,
+    ProtegidaTotal2021 = ...2,
+    ProtegidaPropiedad2021 = ...3,
+    ProtegidaAlquiler2021 = ...4,
+    ProtegidaAutopromocion2021 = ...5
+  ) |> 
+  select(-...6) |> 
+  mutate(across(-CCAA, as.numeric)) |> 
+  mutate(CCAA = case_when(
+    CCAA == "Asturias (Principado de )" ~ "Asturias",
+    CCAA == "Balears (Illes)" ~ "Islas Baleares",
+    CCAA == "Comunitat Valenciana" ~ "Comunidad Valenciana",
+    CCAA == "Madrid (Comunidad de)" ~ "Comunidad de Madrid",
+    CCAA == "Murcia (Región de)" ~ "Comunidad de Murcia",
+    CCAA == "Navarra (Comunidad Foral de)" ~ "Comunidad Foral de Navarra",
+    CCAA == "Rioja (La)" ~ "La Rioja",
+    TRUE ~ CCAA))
+
+# Porcentaje de vivienda protegida del total en 2011 por CCAA
+
+nviviendas2011 <- viviendas2011 |> 
+    mutate(
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia")) |> 
+  select(CCAA) |> 
+  group_by(CCAA) |> 
+  mutate(ViviendasTotales2011 = n() * 10) |> 
+  select(CCAA, ViviendasTotales2011) |> 
+  distinct(CCAA, .keep_all = T)
+
+protegida2011 <- protegida2011 |> 
+  left_join(nviviendas2011, by = "CCAA")
+
+protegida2011 <- protegida2011 |> 
+    mutate(PorcentajeProtegidas2011 = round((ProtegidaTotal2011 / ViviendasTotales2011) * 100, 3)) |> 
+    select(PorcentajeProtegidas2011, CCAA)
+
+
+# Porcentaje de vivienda protegida del total en 2021 por CCAA
+
+nviviendas2021 <- viviendas2021 |> 
+    mutate(
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
+  left_join(ccaas, by = c("CPRO" = "CodigoProvincia")) |> 
+  select(CCAA) |> 
+  group_by(CCAA) |> 
+  mutate(ViviendasTotales2021 = n() * 10) |> 
+  select(CCAA, ViviendasTotales2021) |> 
+  distinct(CCAA, .keep_all = T)
+
+protegida2021 <- protegida2021 |> 
+  left_join(nviviendas2021, by = "CCAA")
+
+protegida2021 <- protegida2021 |> 
+    mutate(PorcentajeProtegidas2021 = round((ProtegidaTotal2021 / ViviendasTotales2021) * 100, 3)) |> 
+  select(PorcentajeProtegidas2021, CCAA)
+
+# Juntar ambos años
+
+protegida <- protegida2011 |> 
+  left_join(protegida2021, by = "CCAA")
+
+protegida <- protegida |> 
+  mutate(ProtegidaDif = PorcentajeProtegidas2021 - PorcentajeProtegidas2011) 
+
+# Juntar con municipios
+municipios <- municipios |> 
+  left_join(protegida, by = "CCAA")
+
+
+```
+
+## Últimos arreglos
+
+Retiro algunos municipios por falta de datos, y compruebo en qué filas sigue habiendo NA. Solamente en 8 filas, todas por falta de PrecioAlquilerM2. Lo que puede ser más problemático es que faltan todos los municipios de Navarra, pudiendo hacer que la imputación sea menos precisa.
+
+```{r}
+
+municipios <- municipios |>
+    filter(MUN_LITERAL != "Baena") |> # Lo retiro porque en 2021 pasa a tener menos de 20000 habitantes y no tengo datos
+  filter(cusec != 47994) |> # No hay municipios de 10k a 20k en Valladolid
+  filter(MUN_LITERAL != "Calatayud") |>  # En 2021 menos de 20k hab
+  filter(MUN_LITERAL != "Barañain") # En 2021 menos de 20k hab
+
+
+  municipios_r <- municipios |> 
+  select(-ipva2021, -ipva2011) |> 
+  filter(rowSums(is.na(select(., everything()))) > 0)
+
+
+
+```
+
+## Imputación valores perdidos
+
+survey notebook
+
+```{r}
+
+municipiosr <- municipios |> 
+  select(-ipva2011, -ipva2021)
+
+data_imputed <- data.frame(
+  cusec = municipiosr$cusec,
+  original = municipiosr$PrecioAlquilerM2,
+  imputed_median = replace(municipiosr$PrecioAlquilerM2, is.na(municipiosr$PrecioAlquilerM2), median(municipiosr$PrecioAlquilerM2, na.rm = TRUE)),
+  imputed_normboot = complete(mice(municipiosr, m=10, method = "norm.boot", seed=123))$PrecioAlquilerM2,
+  imputed_pmm = complete(mice(municipiosr, m=10, method = "pmm", seed=123))$PrecioAlquilerM2,
+  imputed_rf = complete(mice(municipiosr, m=10, method = "rf", seed=123))$PrecioAlquilerM2
+) 
+
+View(data_imputed|> 
+  filter(rowSums(is.na(data_imputed)) > 0))
+
+
+
+```
+
+## Modelo de prueba
+
+```{r}
+
+variables_independientes <- municipios[, c(9:47)]  # Seleccionar desde la novena columna hasta la cuadragésima columna
+variables_independientes <- subset(variables_independientes, select = -c(16:23))
+variables_independientes <- subset(variables_independientes, select = -c(17:19))
+
+
+# Ajustar el modelo de regresión lineal
+modelo <- lm(PropiedadDifMun ~ ., data = variables_independientes)
+
+# Mostrar resumen del modelo
+summary(modelo)
+```
+
+## Problemas
+
+-   Falta de datos de IPVA de País Vasco y Navarra por temas administrativos. Puedo quitar IPVA o intentar rescatarlo imputando los datos de estos municipios, pero sin tener como referencia para la imputación ningún municipio de la misma CCAA. Quizá no es imprescindible ya que tengo el precio por metro cuadrado de alquiler.
+
+-   Navarra, falta de datos de alquiler por metro en alquiler.
+
+-   Los municipios de menos de 1000 habitantes no entran en la variable de Renta mediana.
+
+-   Limitaciones al construir 'jóvenes que compran'
+
+Analisis: desccriptivo de un municipio de cada cluster
