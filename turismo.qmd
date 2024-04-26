@@ -19,7 +19,7 @@ library(readxl)
 Esta base de datos del INE existen datos desde agosto del 2020 hasta agosto del 2023. Es una 'estadística experimental' donde se scrappean los datos de las tres plataformas de alojamiento turístico más utilizadas.
 
 ```{r}
-turismo <- read_excel("vivienda turística/exp_viv_turistica_tabla5_FEB2021.xlsx", sheet = 3)
+turismo <- read_excel("vivienda turística/exp_viv_turistica_tabla5_FEB2021.xlsx", sheet = 3, na = "Dato protegido por secreto estadístico.")
 
 ```
 
@@ -45,6 +45,7 @@ turismo_red <- turismo |>
 ```
 
 ## Join con viviendas 2021
+
 ### Cargar viviendas 2021
 
 ```{r}
@@ -91,7 +92,9 @@ turismo <- turismo |>
 cor(turismo$PorcentajeTuristicasProvincias, turismo$PorcentajeRuralProvincias, method = "pearson")
 
 ```
+
 En cuanto al gráfico vemos que hay un conjunto de provincias con un porcentaje de viviendas turísticas menor a 15 que siguen cierta tendencia (pocas viviendas turísticas = más municipios rurales), pero hay varias provincias con un muy alto porcentaje de viviendas turísticas en comparación y con un porcentaje de municipios rurales más bajo que la media.
+
 ```{r, fig.height=6, fig.width=12}
 #Gráfico
 
@@ -107,6 +110,7 @@ ggplot(turismo_unique, aes(x = PorcentajeTuristicasProvincias, y = PorcentajeRur
 ```
 
 Estas provincias son las Islas Baleares, Alicante, Cádiz, Girona, Málaga, Las Palmas, Santa Cruz de Tenerife y Tarragona. Son ciudades con fuerte afluencia turística de costa. Islas Baleares tiene un 42,54% de las viviendas destinadas al turismo, lo cual es un porcentaje altísimo.
+
 ```{r}
 turismo_unique |> 
   filter(PorcentajeTuristicasProvincias > 15) |> 
@@ -116,7 +120,7 @@ turismo_unique |>
 
 ### Viviendas turísticas por CCAA
 
-Se muestra el mismo patrón por Comunidades autónomas. Vemos que provincias como Castilla y León o Castilla-La Mancha, que eran comunidades con la mayoría de viviendas secundarias, ahora están de las más bajas. Con lo cual estas viviendas secundarias no son orientadas al turismo en su mayoría.   
+Se muestra el mismo patrón por Comunidades autónomas. Vemos que provincias como Castilla y León o Castilla-La Mancha, que eran comunidades con la mayoría de viviendas secundarias, ahora están de las más bajas. Con lo cual estas viviendas secundarias no son orientadas al turismo en su mayoría.
 
 ```{r, fig.height=6, fig.width=12}
 

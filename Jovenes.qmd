@@ -7,7 +7,6 @@ editor: visual
 ## Importar datos
 
 ```{r}
-
 library(tidyverse)
 library(ggpubr)
 library(ggplot2)
@@ -817,7 +816,7 @@ compra11 <- compra11 |>
   mutate(mayor = ifelse(ANORES - ANAC > 18, TRUE, FALSE)) |> 
   filter(mayor == TRUE) # Que era mayor de edad en la última mudanza
 
-compra11r <- compra11 |> 
+compra11 <- compra11 |> 
   filter(NORDEN %in% c(1, 2)) |># Que es 1 o 2 en el núcleo
   filter(!(OPA_NORDEN %in% c(1))) # Que otro pariente no es 1
 
@@ -970,23 +969,23 @@ compra21_r <- compra21 |>
 
 ### 2011
 
-Hay menos jóvenes con las condiciones especificadas en 2021 que en 2011.
+Hay menos jóvenes con las condiciones especificadas en 2021 que en 2011. Hay 15% del total en 2021, y 26% del total en 2011 (descenso del 35%).
 
--   Edad. La media de edad en 2011 es de 31,1, en 2021 es de 30,35.
+-   Edad. La media de edad en 2011 es de 31,4, en 2021 es de 31,16.
 
 -   Número de orden en el núcleo. La mitad de los casos tienen a la persona encuestada como primera persona en el orden del núcleo, con un 42,8% restante siendo la segunda persona. Le siguen un 4,1% siendo la tercera persona, un 2,3% la cuarta, 1% la quinta, y porecentajes desdeñables el resto. Hay una persona que es la persona número 24. Vemos exactamente quiénes son estas personas: personas con un 50% de desempleo (25% superior al resto). Residiendo en Ceuta, Melilla. Son 941 personas.
 
--   Orden de un pariente. Quizá quitar personas que su otro pariente tiene un orden superior (1, 2?) La mayoría de casos los parientes son el número 3, con 93%. (pueden ser hijos, por ejemplo). En un 44% de los casos no hay familiares.
+-   Orden de un pariente. Quitar personas que su otro pariente tiene un orden superior (1). La mayoría de casos los parientes son el número 3, con 78,9%. (pueden ser hijos, por ejemplo. En un 10% el otro pariente es número 2. En un 47,5% de los casos no hay familiares.
 
--   Trabajo. La mayoría de personas trabajan en un municipio distinto al que residen (45,5%), seguido de personas que trabajan en el mismo municipio (36,6%).
+-   Trabajo. La mayoría de personas trabajan en un municipio distinto al que residen (4, 45,9%), seguido de personas que trabajan en el mismo municipio (3, 36,6%).
 
 -   Año de llegada a la vivienda. En la mayoría de los casos se llegó en 2006 o 2007 (es también la media). Sería una edad media de 25-26 años.
 
--   Condición dentro del núcleo. Un 79% delas personas son cónyuges, un 17.5% personas que viven solas y el resto madres y padres solteros.
+-   Condición dentro del núcleo. Un 80.6% de las personas son cónyuges, un 16% personas que viven solas y el resto madres y padres solteros.
 
--   Estructura del hogar. La mayoría de los casos, 44,8%, es un hogar formado por una pareja con hijos. En segundo lugar, 29,6%, hogar formado por pareja sin hijos. En tercer lugar, con 5,9%, 'otro tipo de hogar', que puede ser compañeros de piso no emparentados, o otros familiares. El último es padre o madre soltera.
+-   Estructura del hogar. La mayoría de los casos, 46,2%, es un hogar formado por una pareja con hijos. En segundo lugar, 32,3%, hogar formado por pareja sin hijos. En tercer lugar, con 3,2%, 'otro tipo de hogar', que puede ser compañeros de piso no emparentados, o otros familiares. El último es padre o madre soltera.
 
--   Tipo de compra. En el 90,1% de los casos quedan pagos de la hipoteca pendientes.
+-   Tipo de compra. En el 92,6% de los casos quedan pagos de la hipoteca pendientes.
 
 -   Provincia. No da mucha información porque salen las provincias más y menos pobladas, no proporcionalmente según su población.
 
@@ -994,6 +993,7 @@ Hay menos jóvenes con las condiciones especificadas en 2021 que en 2011.
 # Edad
 mean(compra11_r$EDAD)
 round(prop.table(table(compra11_r$EDAD)), digits = 3)
+hist(compra11_r$EDAD)
 
 # Número de orden
 round(prop.table(table(compra11_r$NORDEN)), digits = 3)
@@ -1012,13 +1012,20 @@ mean(is.na(compra11_r$LTRABA)) * 100
 round(prop.table(table(compra11_r$LTRABA)), digits = 3)
 mean(is.na(compra11$LTRABA)) * 100
 
-
 # Año de llegada a la vivienda
 mean(compra11_r$ANORES)
 round(prop.table(table(compra11_r$ANORES)), digits = 3)
 
 # Condición dentro del núcleo
 round(prop.table(table(compra11_r$TIPOPER)), digits = 3)
+compra11_r %>%
+  count(TIPOPER) %>%
+  mutate(proporcion = n / sum(n) * 100) %>%
+  ggplot(aes(x = TIPOPER, y = proporcion, label = paste0(round(proporcion, 2), "%"))) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  geom_text(vjust = -0.5) +
+  labs(title = "Distribución de TIPOPER", x = "TIPOPER", y = "Proporción (%)") +
+  theme_minimal()
 
 # Estructura del hogar
 round(prop.table(table(compra11_r$ESTHOG)), digits = 3)
@@ -1034,25 +1041,25 @@ tail(sort(prop.table(table(compra11_r$PROV_LITERAL)), decreasing = TRUE), 3)
 
 ### 2021
 
--   Edad. La edad es más joven lo cual me hace suponer que es por filtrar mal.
+-   Edad. La edad es más joven que en 2011 lo cual me hace sospechar que estoy añadiendo casos de herencia, por ejemplo, porque no puedo filtrar tan bien en este año.
 
--   Número de orden. Un 37,3% es número 1, un 44,4% número 2, seguido de un 11,5% 3 y 4,6% 4. Hay más personas donde la persona joven no es número 1 ni 2, seguramente estoy incluyendo casos que no me interesan que no son compra. Quizá filtrar directamente a partir de 4?
+-   Número de orden. Un 46,6% es número 1, un 53,4% número 2.
 
-Las personas con un orden de 6 o más presentan más desempleo, al igual que en 2011. Son 1494.
+-   Orden de pariente. El 52.5% de los casos vive sin otro familiar. Es más alto que en 2011. En la mayoría de casos éstos son de orden 3 (23.3%) o 4 (15.7%).
 
--   Trabajo. Un 29% no trabajan. La población joven con otros regimenes de tenencia, sin filtrar por compra, es un 32%.
+-   Trabajo. Un 26% no trabajan. La población joven con otros regímenes de tenencia, sin filtrar por compra, es un 32%. Un 37% trabaja en un municipio distinto al que reside.
 
--   Otro pariente. En la mayoría de los casos el familiar es número 3, seguido de 4. En un 51% de casos no hay parientes. Es más alto que en 2011.
+-   Año de llegada a la vivienda. La media es 2017, similar a 2011 (con 10 años más).
 
 -   Condición dentro del núcleo. La mayoría 58,5% viven en pareja. Hay el doble de personas que viven solas, que en 2011, un 36,6%. Hay también más madres solteras, pero igual padres solteros.
 
--   Estructura del hogar. La mayoría de hogares son familias en pareja con hijos (30,2%), pero menos que en 2011 (44,8%). Continúan en empate pareja sin hijos 19,6% y otro tipo de hogar, pero ha aumentado mucho más este otro tipo de hogar en 2021.
+-   Estructura del hogar. La mayoría de hogares son familias en pareja con hijos (37,2%), pero menos que en 2011 (46,2%). Continúa pareja sin hijos 24,5% y 'otro tipo de hogar', pero ha aumentado mucho más este otro tipo de hogar en 2021, triplicándose.
 
 ```{r}
-
 # Edad
 mean(compra21_r$VAREDAD)
 round(prop.table(table(compra21_r$VAREDAD)), digits = 3)
+hist(compra21_r$VAREDAD)
 
 # Número de orden
 round(prop.table(table(compra21_r$NORDEN)), digits = 3)
@@ -1069,8 +1076,7 @@ mean(compra21_r$LTRAB == " ") * 100
 round(prop.table(table(compra21_r$NORDEN_OPA)), digits = 3)
 
 # Trabajo
-mean(is.na(compra11_r$LTRABA)) * 100
-round(prop.table(table(compra11_r$LTRABA)), digits = 3)
+round(prop.table(table(compra21_r$LTRAB)), digits = 3)
 
 # Año de llegada a la vivienda
 # Habría que transofrmar la variable
@@ -1156,7 +1162,6 @@ compra21 <- compra21 |>
     Alquiler21CCAA = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
     Otro21CCAA = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>   ungroup()
 
-
 ```
 
 ## Análisis
@@ -1165,11 +1170,11 @@ compra21 <- compra21 |>
 
 ### Por municipio
 
--   Propiedad 2021 con filtro (nuevo). Los municipios con más propiedad juvenil con las características que hemos definido (no vive con los padres, se mudó por última vez con mínimo 18 años...) son Martos con un 91% de propiedad frente a otros regímenes de tenencia, otros pueblos de Jaén o andaluces. Los que menos son catalanes, las islas.
+-   Propiedad 2021 con filtro (nuevo). Los municipios con más propiedad juvenil con las características que hemos definido (no vive con los padres, se mudó por última vez con mínimo 18 años...) son Martos con un 89% de propiedad frente a otros regímenes de tenencia, otros pueblos de Jaén o andaluces. Los que menos son catalanes, las islas.
 
 -   Compra 2011 con filtro (nuevo). Los municipios con más compra juvenil son municipios pequeños de Zamora o municipios valencianos y andaluces.
 
--   Herencia 2011 con filtro (nuevo). Los municipios con más jovenes por herencia son municipios pequeños de LAs Palmas, Galicia. La gran mayoría son este tipo de municipios.
+-   Herencia 2011 con filtro (nuevo). Los municipios con más jovenes por herencia son municipios pequeños de Las Palmas, Galicia. La gran mayoría son este tipo de municipios.
 
 ```{r}
 
@@ -1287,17 +1292,20 @@ top_propiedad_2021 <- compra21 |>
     select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 # Alquiler
-top_propiedad_2021 <- compra21 |> 
+top_alquiler_2021 <- compra21 |> 
     distinct(cusec, .keep_all = TRUE) |> 
     arrange(desc(Alquiler21Mun)) |> 
     select(Alquiler21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 # Otro
-top_propiedad_2021 <- compra21 |> 
+top_otro_2021 <- compra21 |> 
     distinct(cusec, .keep_all = TRUE) |> 
     arrange(desc(Otro21Mun)) |> 
     select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
+top_propiedad_2021
+top_alquiler_2021
+top_otro_2021
 ```
 
 ### Por provincia
@@ -1311,17 +1319,20 @@ top_propiedad_2021 <- compra21 |>
     select(Propiedad21Prov, PROV_LITERAL, CCAA)
 
 # Alquiler
-top_propiedad_2021 <- compra21 |> 
+top_alquiler_2021 <- compra21 |> 
     distinct(CPRO, .keep_all = TRUE) |> 
     arrange(desc(Alquiler21Prov)) |> 
     select(Alquiler21Prov, PROV_LITERAL, CCAA)
 
 # Otro
-top_propiedad_2021 <- compra21 |> 
+top_otro_2021 <- compra21 |> 
     distinct(CPRO, .keep_all = TRUE) |> 
     arrange(desc(Otro21Prov)) |> 
     select(Propiedad21Mun, PROV_LITERAL, CCAA)
 
+top_propiedad_2021
+top_alquiler_2021
+top_otro_2021
 ```
 
 ### Por CCAA
@@ -1585,6 +1596,8 @@ compra_total <- compra11_mun |>
 
 ## En 2011
 
+Las provincias con menos compra son Teruel, Melilla, provincias gallegas, las Islas. Son provincias más envejecidas o con características particulares.
+
 ```{r}
 
 # Top municipios con más compra en 2011
@@ -1603,7 +1616,7 @@ top_propiedad_2011_filtro_mun <- compra11 %>%
 top_propiedad_2011_filtro <- compra11 %>%
   arrange(desc(Compra11Prov)) %>%
   distinct(CPRO, .keep_all = TRUE) |> 
-  select(Compra11Prov, MUN_LITERAL, PROV_LITERAL)
+  select(Compra11Prov, PROV_LITERAL)
 
 # Top provincias con más propiedad en 2011 NO FILTRO
 #top_propiedad_2011 <- jovenes_total %>%
@@ -1611,10 +1624,25 @@ top_propiedad_2011_filtro <- compra11 %>%
 #    distinct(CPRO, .keep_all = TRUE) |> 
 #    select(Propiedad11Prov, MUN_LITERAL, PROV_LITERAL)
 
-top_propiedad_2011_filtro_mun
+# Top municipios con más HERENCIA en 2011
+top_herencia_2011_filtro_mun <- compra11 %>%
+  arrange(desc(Herencia11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Herencia11Mun, MUN_LITERAL, PROV_LITERAL)
+
+# Top provincias con más HERENCIA en 2011
+top_herencia_2011_filtro <- compra11 %>%
+  arrange(desc(Herencia11Prov)) %>%
+  distinct(CPRO, .keep_all = TRUE) |> 
+  select(Herencia11Prov, PROV_LITERAL)
+
+
+View(top_propiedad_2011_filtro_mun)
 #top_propiedad_2011_mun
-top_propiedad_2011_filtro
+View(top_propiedad_2011_filtro)
 #top_propiedad_2011
+View(top_herencia_2011_filtro_mun)
+View(top_herencia_2011_filtro)
 
 ```
 
@@ -1624,7 +1652,27 @@ top_propiedad_2011_filtro
 
 -   2021 sin filtro. Cambia el orden de las provincias andaluzas, añade algunas de Castilla y León. Hay más propiedad en Madrid.
 
--   2011 con filtro. Se posiciona en primer lugar Cádiz (76%), seguido de Alicante, precisamente provincias con alto turismo.
+-   2021 con filtro. Se posiciona en primer lugar Cádiz (76%), seguido de Alicante, precisamente provincias con alto turismo.
+
+Las provincias con menos propiedad son Barcelona, las islas, Girona. Vemos menos claramente las provincias más envejecidas como las gallegas. Sin embargo sí se mantiene de forma muy similar los municipios con menos propiedad: Cataluña, Barcelona, Islas Baleares. Quizá ha cambiado más los municipios donde se compra más, pero menos los que no se compra mucho.
+
+Nerja sale el top 1, vemos que en 2011 está bastante baja la propiedad ahí, así que hay un aumento muy significativo. Hay muchos municipios andaluces con mucha propiedad en 2021. Por qué? Hay que tener cuidado de no estar incluyendo herencia, pero:
+
+-   Andalucía es precisamente de las CCAA con menos población envejecida; no hay razón por la cual haya más herencia ahí que en otras CCAA. Precisamente, habría más en Galicia por ejemplo.
+
+-   Si vemos la herencia en 2011, vemos estas provincias gallegas y Jaén, Cuenca, Teruel, Cáceres. No vemos que haya abundante presencia andaluza, por lo que indicaría que este aumento en Andalucía no debería deberse a mezclar la compra con la herencia, sino ser genuino
+
+-   He visto en el INE que ha aumentado mucho las herencias en Andalucía... la CCAA con más aumento <https://www.ine.es/jaxiT3/Datos.htm?t=6154#_tabs-grafico>
+
+-   Va a ser que mi 'diferencia' solo muestra dónde ha aumentado la herencia???? Puedo reducir este efecto poniendo no sólo la compra en 2011, sino toda la propiedad?
+
+-   Por otra parte, y si lo hago viendo el alquiler? dónde se ha reducido el alquiler es muy similar a decir dónde ha aumentado la compra...o hasta qué punto es eso mejor?
+
+-   Las top herencia son las provincias que luego salen con más aumento de propiedad al ver la diferencia! POR QUÉ? -\> debe estar contando como 'propiedad' en 2021 la herencia, y contrasta con la poca compra real en 2011.
+
+Buscar base de datos de herencias por municipio, o intentar reducir ese efecto con datos de cuánto ha aumentado la herencia según provincia, o hacer con propieedad por compra e hipoteca.
+
+Mañana: busco herencias por municipios, intento restar a la propiedad de 2021 el % que correspondería a la herencia.
 
 ```{r}
 
@@ -1632,7 +1680,7 @@ top_propiedad_2011_filtro
 top_propiedad_2021_filtro_mun <- compra21 %>%
   arrange(desc(Propiedad21Mun)) %>%
   distinct(cusec, .keep_all = TRUE) |> 
-  select(Propiedad21Mun, PROV_LITERAL)
+  select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL)
 
 # Top municipios con más propiedad en 2021 NO FILTRO
 #top_propiedad_2021_mun <- jovenes_total %>%
@@ -1652,18 +1700,44 @@ top_propiedad_2021_filtro <- compra21 %>%
 #    distinct(CPRO, .keep_all = TRUE) |> 
 #    select(Propiedad21Prov, PROV_LITERAL)
 
-top_propiedad_2021_filtro_mun
+View(top_propiedad_2021_filtro_mun)
 #top_propiedad_2021_mun
-top_propiedad_2021_filtro
+View(top_propiedad_2021_filtro)
 #top_propiedad_2021
 
 ```
 
 ## Diferencias entre ambos años
 
+El problema es que, si en 2011 sólo incluyo compra pero en 2021 se me están colando casos de herencia, al hacer las diferencias de propiedad me sale acentuado este problema. Quizá en un municipio no hay nada de compra juvenil en 2011, pero como en 2021 incluyo alguna herencia, estoy viendo un gran aumento en ese municipio de propiedad.
+
+El caso de Jaén \<= 2000. Hay 1448 jóvenes en 2011 que residen en este grupo de municipios. En 2021, hay 812. De los que filtramos con las características que nos interesan, hay 457 en 2011 y 300 en 2021. Sin embargo, de compra hay 257 en 2011 y en 2021 hay 240 de propiedad.
+
+```{r}
+jaen11 <- jovenes11 |>   
+  filter(cusec == "23991")
+jaen21 <- jovenes |>   
+  filter(cusec == "23991")
+
+jaen11 <- compra11 |>   
+  filter(cusec == "23991")
+jaen21 <- compra21 |>   
+  filter(cusec == "23991")
+
+jaen11 <- compra11_r |>   
+  filter(cusec == "23991")
+jaen21 <- compra21_r |>   
+  filter(cusec == "23991")
+
+(table(compra11$TENEN_r))
+
+```
+
+Si comparo los municipios con más herencia en 2011, no son los mismos que los municipios con más aumento de propiedad.
+
 ### Por municipio
 
--   Propiedad de 2021 - Compra de 2011. Doonde mas ha aumentado son muchos municipios rurales... me precupa no medir bien la compra solo en propiedad en vez de herencia.
+-   Propiedad de 2021 - Compra de 2011. Donde mas ha aumentado son muchos municipios rurales... me precupa no medir bien la compra solo en propiedad en vez de herencia.
 
 ```{r}
 
@@ -1672,20 +1746,20 @@ compra_total <- compra_total |>
   mutate(
     PropiedadDifMun = Propiedad21Mun - Compra11Mun)
 
-compra_total %>%
+View(compra_total |> 
     distinct(PropiedadDifMun, .keep_all = TRUE) |> 
-  arrange(desc(PropiedadDifMun)) %>%
-    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
+  arrange(desc(PropiedadDifMun)) |> 
+    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CCAA))
 
 # Alquiler
 compra_total <- compra_total |> 
   mutate(
     AlquilerDifMun = Alquiler21Mun - Alquiler11Mun)
 
-compra_total %>%
+View(compra_total %>%
     distinct(AlquilerDifMun, .keep_all = TRUE) |> 
   arrange(desc(AlquilerDifMun)) %>%
-    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
+    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL, CCAA))
 
 
 # Otro
@@ -1694,9 +1768,9 @@ compra_total <- compra_total |>
     OtroDifProv = Otro21Mun - Otro11Mun)
 
 compra_total %>%
-    distinct(OtroDifProv, .keep_all = TRUE) |> 
-  arrange(desc(OtroDifProv)) %>%
-    select(OtroDifProv, MUN_LITERAL, PROV_LITERAL, CCAA)
+    distinct(OtroDiMun, .keep_all = TRUE) |> 
+  arrange(desc(OtroDiMun)) %>%
+    select(OtroDiMun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 
 
@@ -1712,10 +1786,10 @@ compra_total <- compra_total |>
     PropiedadDifProv = Propiedad21Prov - Compra11Prov) |> 
   ungroup()
 
-compra_total %>%
+View(compra_total %>%
     distinct(PropiedadDifProv, .keep_all = TRUE) |> 
   arrange(desc(PropiedadDifProv)) %>%
-    select(PropiedadDifProv, PROV_LITERAL, CCAA)
+    select(PropiedadDifProv, PROV_LITERAL, CCAA))
 
 # Alquiler
 compra_total <- compra_total |>
@@ -1736,10 +1810,10 @@ compra_total <- compra_total |>
     OtroDifProv = Otro21Prov - Otro11Prov) |> 
   ungroup()
 
-compra_total %>%
+View(compra_total %>%
     distinct(OtroDifProv, .keep_all = TRUE) |> 
   arrange(desc(OtroDifProv)) %>%
-    select(OtroDifProv, PROV_LITERAL, CCAA)
+    select(OtroDifProv, PROV_LITERAL, CCAA))
 ```
 
 ### Por CCAA
@@ -1797,7 +1871,7 @@ Hacer el analisis de componentes pero con las varibales que hablamos y con este 
 ```{r, fig.height=6, fig.width=12}
 # Mapa por provincias PROPIEDAD
 
-library(mapSpain)
+library(maepSpain)
 
 esp_can <- esp_get_country() 
 can_prov <- esp_get_can_provinces()
@@ -1831,5 +1905,286 @@ mapa_propiedad_prov <- ggplot(esp_can) +
 
 mapa_propiedad_prov
 
+
+```
+
+### Tema herencia
+
+Primero hacer que compra11 incluya toda la propiedad
+
+```{r}
+
+compra11_mezcla <- compra11 |> 
+  filter(TENEN_r %in% c("Propiedad por compra, pagada", "Propiedad por compra, pagos pendientes", "Propiedad por herencia o donación"))
+
+compra11_mezcla <- compra11 |> 
+  group_by(cusec) |> 
+  mutate(
+    Propiedad11Mun = round((sum(TENEN_VIV %in% c("Compra", "Herencia o donación")) / n()) * 100, 2),
+    Alquiler11Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro11Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>
+  ungroup() |> 
+  distinct(cusec, .keep_all = T)
+
+# top propiedad compra + herencia 2011
+View(top_propiedad_2011_filtro_mun <- compra11_mezcla %>%
+  arrange(desc(Propiedad11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Propiedad11Mun, MUN_LITERAL, PROV_LITERAL))
+
+# top compra 2011
+View(top_propiedad_2011_filtro_mun <- compra11 %>%
+  arrange(desc(Compra11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Compra11Mun, MUN_LITERAL, PROV_LITERAL))
+
+# mezcla
+compra_total_mezcla <- compra11_mezcla |> 
+  left_join(compra21_mun, by = "cusec") |> 
+    rename_with(~str_replace(., "\\.y$", ""), .cols = ends_with(".y")) |>
+  select(-ends_with(".x")) |> 
+  distinct(cusec, .keep_all=T)
+
+compra_total_mezcla <- compra_total_mezcla |> 
+  mutate(
+    PropiedadDifMun = Propiedad21Mun - Propiedad11Mun)
+
+# top dif propiedad hernecia + compra
+View(compra_total_mezcla |> 
+    distinct(PropiedadDifMun, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifMun)) |> 
+    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CCAA))
+
+# normal
+compra_total <- compra11_mun |> 
+  left_join(compra21_mun, by = "cusec") |> 
+    rename_with(~str_replace(., "\\.y$", ""), .cols = ends_with(".y")) |>
+  select(-ends_with(".x")) |> 
+  distinct(cusec, .keep_all=T)
+
+compra_total <- compra_total |> 
+  mutate(
+    PropiedadDifMun = Propiedad21Mun - Compra11Mun)
+
+# top dif propiedad compra - propiedad
+View(compra_total |> 
+    distinct(PropiedadDifMun, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifMun)) |> 
+    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CCAA))
+
+#top compra normal
+View(compra11 %>%
+  arrange(desc(Compra11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Compra11Mun, MUN_LITERAL, PROV_LITERAL))
+
+# top herencia 2011
+top_herencia_2011_filtro_mun <- compra11 %>%
+  arrange(desc(Herencia11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Herencia11Mun, MUN_LITERAL, PROV_LITERAL)
+
+View(top_herencia_2011_filtro_mun)
+
+# top propiedad 2021
+top_propiedad_2021_filtro_mun <- compra21 %>%
+  arrange(desc(Propiedad21Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL)
+
+View(top_propiedad_2021_filtro_mun)
+```
+
+### Intentar estimar la herencia en 2021
+
+Ver aumento de herencia por provincia. A la cantidad de viviendas 'compradas' en 2021, resto ese porcentaje por provincia. a ver qué pasa...
+
+De todas las viviendas principales en propiedad, tantas eran de herencia
+
+Problema con datos exactos: la herencia externa del ine incluye herencia de viviendas secundarias.
+
+<https://www.ine.es/jaxiT3/Datos.htm?t=6154#_tabs-tabla>
+
+Tengo el porcentaje de herencia en 2021. Podría estimar el número real de viviendas compradas mediante restar ese porcentaje al total de propiedad? Pero eso sería asumir que en mis filtros me quedo con la misma cantidad de herencia que de compra real. Y no es así, me quedo con más ocmpras. Quizá hacer esto antes, y luego hacer lo de filtrar?
+
+-   Ver cuántos casos me quito de encima si reduzco antes de filtros y luego filtro. Cuántos casos se van?
+
+-   Se van mas casos que si filtro y luego reduzco? (deberia ser asi creo yo)
+
+Solución mala al problema: pensar en dónde ha aumentado la propiedad, sin diferenciar compra y herencia. Dónde no ha aumentado el alquiler sin más.
+
+-   Quizá es más certero ver en qué municipios ha aumentado mucho el alquilelr como forma de ver dónde ha disminuido la propiedad. Porque propiedad-alquiler siempre van de la mano, pero la herencia es constante...
+
+-   Ver cómo cambian los top municipios que han perdido más alquiler vs los municipios que han tenido más compra. ¿Veo que hay menos municipios con mayor herencia? Quizá esto es lo más sencillo y efectivo que liarme a hacer estimaciones raras. Quizá lo de herencia me puede servir de 'comprobación' ? Pero se supone que un aumento en el alquiler siempre se corresponde con un descenso en propiedad, y viceversa. Y la herencia sí es estable, o por lo menos, solo ha experimentado un aumento en estos años.
+
+-   puedo ver en que municipios hay mas herencia en 2021. ver si estos municipios son los mismos en los que se ha reducido mucho el alquiler.
+
+o si hay datos de herencia??? <https://www.ine.es/jaxi/Tabla.htm?tpx=56582&L=0>
+
+<https://www.fotocasa.es/fotocasa-life/compraventa/se-incrementa-el-perfil-de-herederos-jovenes-con-vivienda-en-venta-o-alquiler/>
+
+### Todo propiedad
+
+```{r}
+propiedad11 <- compra11 |>
+  group_by(cusec) |>
+  mutate(
+    Propiedad11Mun = round((sum(TENEN_VIV %in% c("Compra", "Herencia o donación")) / n()) * 100, 2),
+    Herencia11Mun = round((sum(TENEN_VIV == "Herencia o donación") / n()) * 100, 2),
+    Alquiler11Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro11Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)
+  ) |>
+  ungroup()
+
+propiedad11 <- propiedad11 |>
+  group_by(CPRO) |>
+  mutate(
+    Propiedad11Prov = round((sum(TENEN_VIV %in% c("Compra", "Herencia o donación")) / n()) * 100, 2),
+    Herencia11Prov = round((sum(TENEN_VIV == "Herencia o donación") / n()) * 100, 2),
+    Alquiler11Prov = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro11Prov = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)
+  ) |> 
+  ungroup() |>
+  select(cusec, CPRO, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun, Propiedad11Prov, Herencia11Prov, Alquiler11Prov, Otro11Prov)
+
+propiedad11 <- propiedad11 |>
+  distinct(cusec, .keep_all = TRUE)
+
+# 2021
+propiedad21 <- compra21 |>
+  group_by(cusec) |>
+  mutate(
+    Propiedad21Mun = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)
+  ) |>
+  ungroup()
+
+propiedad21 <- propiedad21 |>
+  group_by(CPRO) |>
+  mutate(
+    Propiedad21Prov = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
+    Alquiler21Prov = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
+    Otro21Prov = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)
+  ) |> 
+  ungroup() |>
+  select(cusec, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad21Prov, Alquiler21Prov, Otro21Prov)
+
+propiedad21 <- propiedad21 |>
+  distinct(cusec, .keep_all = TRUE)
+
+# Diferencia de propiedad11 con propiedad21
+propiedad <- propiedad11 |>
+  left_join(propiedad21, by = "cusec") |>
+  mutate(
+    PropiedadDifMun = Propiedad21Mun - Propiedad11Mun,
+    PropiedadDifProv = Propiedad21Prov - Propiedad11Prov,
+    AlquilerDifMun = Alquiler21Mun - Alquiler11Mun,
+    AlquilerDifProv = Alquiler21Prov - Alquiler11Prov,
+    OtroDifMun = Otro21Mun - Otro11Mun,
+    OtroDifProv = Otro21Prov - Otro11Prov
+  ) |>
+  filter(!is.na(Otro21Mun)) |>
+  left_join(nombres_provincias, by = "CPRO") |>
+  left_join(nombres_municipios, by = "cusec") |>
+  distinct(cusec, .keep_all = TRUE)
+```
+
+## Analisis por municipios
+
+```{r}
+# General
+table(propiedad11$TENEN_VIV)
+
+# Nerja
+propiedad11 %>%
+  filter(cusec == 29075) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+# Lugo 2000
+propiedad11 %>%
+  filter(cusec == 27991) %>%
+  select(TENEN_VIV) |>
+  nrow()
+
+compra21 %>%
+  filter(cusec == 27991) %>%
+  select(TENEN_VIV) %>%
+  nrow()
+
+# Jaén 2000
+propiedad11 %>%
+  filter(cusec == 23991) %>%
+  select(TENEN_VIV) |>
+  table()
+
+compra21 %>%
+  filter(cusec == 23991) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+# Ronda
+propiedad11 %>%
+  filter(cusec == 29084) %>%
+  select(TENEN_VIV) |>
+  table()
+
+compra21 %>%
+  filter(cusec == 29084) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+# Vícar
+propiedad11 %>%
+  filter(cusec == "04102") %>%
+  select(TENEN_VIV) |>
+  table()
+
+compra21 %>%
+  filter(cusec == "04102") %>%
+  select(TENEN_VIV) %>%
+  table()
+
+# Maó
+propiedad11 %>%
+  filter(cusec == "07032") %>%
+  select(TENEN_VIV) |>
+  table()
+compra21 %>%
+  filter(cusec == "07032") %>%
+  select(TENEN_VIV) %>%
+  table()
+
+# Huesca 2k-5k
+propiedad11 %>%
+  filter(cusec == 22992) %>%
+  select(TENEN_VIV) |>
+  table()
+compra21 %>%
+  filter(cusec == 22992) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+# Úbeda, top 2 ganancia de propiedad en Jaén menos 2k
+propiedad11 %>%
+  filter(cusec == 23092) %>%
+  select(TENEN_VIV) |>
+  table()
+compra21 %>%
+  filter(cusec == 23092) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+# Nerja
+propiedad11 %>%
+  filter(cusec == 29075) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+compra21 %>%
+  filter(cusec == 29075) %>%
+  select(TENEN_VIV) %>%
+  table()
 
 ```

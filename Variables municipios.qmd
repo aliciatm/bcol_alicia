@@ -202,42 +202,6 @@ De cara al análisis de componentes o clusters de los municipios, preparo una ta
 
 -   Porcentaje de viviendas secundarias
 
-### Índice de Precios de Vivienda en Alquiler
-
-A nivel de municipio, mayores de 10000 habitantes. Pierdo info de municipios menos de 10k. Imputarlos?
-
-```{r}
-
-ipva <- read_excel("Índice precios alquiler/59060.xls")
-
-# Ajustar los cusec de 'Resto PROViNCIA'
-ipva <- ipva |> 
-  mutate(cusec = if_else(str_detect(cusec, "^Resto"), str_replace(lag(cusec), "\\d{2}$", "99"), cusec))  
-
-# Limpiar tabla
-ipva <- ipva |> 
-  mutate(MUN_LITERAL = substr(cusec, 7, nchar(cusec)), 
-         cusec = substr(cusec, 1, 5)) |> 
-  rename(ipva2021 = "2021", ipva2011 = "2011") |> 
-  select(-MUN_LITERAL)
-
-# Agrupar municipios pequeños
-ipva <- ipva |> 
-  left_join(cusec_rural_2011, by = c("cusec" = "cusec_original")) |> 
-  mutate(cusec = coalesce(cusec.y, cusec)) |> 
-  select(-cusec.y) |> 
-  
-  group_by(cusec) |> # Group all small mun together by province 
-  summarise(ipva2021 = mean(ipva2021),
-            ipva2011 = mean(ipva2011)) |> 
-  ungroup()
-
-municipios <- municipios |> 
-  left_join(ipva, by = "cusec") |> 
-  distinct(cusec, .keep_all=T)
-
-```
-
 ### Índice de Precios de Vivienda
 
 A nivel de CCAA.
@@ -492,9 +456,9 @@ habitat <- microdatos2011 |>
     CMUN = trimws(CMUN),
     cusec = paste0(CPRO, CMUN)) |> 
    mutate(
-     HABITAT = case_when(
+     HABITAT = factor(case_when(
        CMUN %in% c(991, 992, 993, 994) ~ "Rural",
-       TRUE ~ "Urbano")) |> 
+       TRUE ~ "Urbano"))) |> 
   select(HABITAT, cusec) |> 
   distinct(cusec, .keep_all = T)
 
@@ -1000,9 +964,6 @@ hipotecas <- hipotecas |>
          PROV_LITERAL = gsub("\\d", "", PROV_LITERAL) |> trimws())  |> 
   select(CPRO, PrecioHipoteca2021Prov)
 
-municipios <- municipios |> 
-  left_join(hipotecas, by = "CPRO")
-
 # Hipotecas 2011
 hipotecas2011 <- read_xlsx("Hipotecas/hipotecas2011.xlsx")
 
@@ -1025,7 +986,8 @@ hipotecas <- hipotecas |>
 
 # Crear variable de diferencia entre años
 hipotecas <- hipotecas |> 
-  mutate(DifPrecioHipotecaProv = ((PrecioHipoteca2021Prov - PrecioHipoteca2011Prov) / PrecioHipoteca2011Prov) * 100) |>     mutate(DifPrecioHipotecaProv = round(DifPrecioHipotecaProv, 2))
+  mutate(DifPrecioHipotecaProv = ((PrecioHipoteca2021Prov - PrecioHipoteca2011Prov) / PrecioHipoteca2011Prov) * 100) |>     
+  mutate(DifPrecioHipotecaProv = round(DifPrecioHipotecaProv, 2))
 
 # Juntar con municipios
 municipios <- municipios |> 
@@ -1210,6 +1172,8 @@ municipios <- municipios |>
 
 Retiro algunos municipios por falta de datos, y compruebo en qué filas sigue habiendo NA. Solamente en 8 filas, todas por falta de PrecioAlquilerM2. Lo que puede ser más problemático es que faltan todos los municipios de Navarra, pudiendo hacer que la imputación sea menos precisa.
 
+COMPROBAR SI TODO ES NUMERICO
+
 ```{r}
 
 municipios <- municipios |>
@@ -1219,36 +1183,37 @@ municipios <- municipios |>
   filter(MUN_LITERAL != "Barañain") # En 2021 menos de 20k hab
 
 
-  municipios_r <- municipios |> 
-  select(-ipva2021, -ipva2011) |> 
-  filter(rowSums(is.na(select(., everything()))) > 0)
-
-
-
 ```
 
 ## Imputación valores perdidos
 
-survey notebook
+Imputo los valores perdidos de la variable PrecioAlquilerM2 usando el método pmm porque parece dar valores con más sentido que otros métodos.
 
 ```{r}
 
-municipiosr <- municipios |> 
-  select(-ipva2011, -ipva2021)
-
+set.seed(123)
 data_imputed <- data.frame(
   cusec = municipiosr$cusec,
   original = municipiosr$PrecioAlquilerM2,
-  imputed_median = replace(municipiosr$PrecioAlquilerM2, is.na(municipiosr$PrecioAlquilerM2), median(municipiosr$PrecioAlquilerM2, na.rm = TRUE)),
-  imputed_normboot = complete(mice(municipiosr, m=10, method = "norm.boot", seed=123))$PrecioAlquilerM2,
-  imputed_pmm = complete(mice(municipiosr, m=10, method = "pmm", seed=123))$PrecioAlquilerM2,
-  imputed_rf = complete(mice(municipiosr, m=10, method = "rf", seed=123))$PrecioAlquilerM2
-) 
+  imputed_pmm = complete(mice(municipiosr, m=10, method = "pmm", seed=123))$PrecioAlquilerM2) 
 
-View(data_imputed|> 
-  filter(rowSums(is.na(data_imputed)) > 0))
+municipios_r <- municipios |> 
+  filter_all(any_vars(is.na(.))) |> 
+select(cusec)
 
+data_imputed_filtrado <- data_imputed |> 
+  inner_join(select(municipios_r, cusec), by = "cusec") |> 
+  rename(PrecioAlquilerM2 = imputed_pmm) |> 
+  select(cusec, PrecioAlquilerM2)
 
+# Ver el resultado
+View(data_imputed_filtrado)
+     
+# Juntar con municipios
+municipios <- municipios %>%
+  full_join(data_imputed_filtrado, by = "cusec") %>%
+  mutate(PrecioAlquilerM2 = coalesce(PrecioAlquilerM2.x, PrecioAlquilerM2.y)) %>%
+  select(-PrecioAlquilerM2.x, -PrecioAlquilerM2.y)
 
 ```
 
@@ -1256,7 +1221,7 @@ View(data_imputed|>
 
 ```{r}
 
-variables_independientes <- municipios[, c(9:47)]  # Seleccionar desde la novena columna hasta la cuadragésima columna
+variables_independientes <- municipios[, c(9:44)]  # Seleccionar desde la novena columna hasta la cuadragésima columna
 variables_independientes <- subset(variables_independientes, select = -c(16:23))
 variables_independientes <- subset(variables_independientes, select = -c(17:19))
 
@@ -1272,10 +1237,19 @@ summary(modelo)
 
 -   Falta de datos de IPVA de País Vasco y Navarra por temas administrativos. Puedo quitar IPVA o intentar rescatarlo imputando los datos de estos municipios, pero sin tener como referencia para la imputación ningún municipio de la misma CCAA. Quizá no es imprescindible ya que tengo el precio por metro cuadrado de alquiler.
 
--   Navarra, falta de datos de alquiler por metro en alquiler.
+-   Navarra, falta de datos de alquiler por metro en alquiler. (lo he imputado)
 
 -   Los municipios de menos de 1000 habitantes no entran en la variable de Renta mediana.
 
 -   Limitaciones al construir 'jóvenes que compran'
 
 Analisis: desccriptivo de un municipio de cada cluster
+
+## Guardar base de datos
+
+```{r}
+
+library(openxlsx)
+write.xlsx(municipios, "municipios.xlsx")
+
+```
