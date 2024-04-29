@@ -1,0 +1,409 @@
+---
+title: "Análisis municipios"
+output: html_document
+date: "2024-04-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Paquetes
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(haven)
+library(mice)
+library(factoextra)
+library(ggpubr)
+
+```
+
+
+## Importar base de datos
+
+```{r}
+
+municipios <- read_xlsx("municipios.xlsx")
+```
+
+## Descriptivo de lss variables de municipios
+### IPV
+Panorama general: en los ultimos años ha aumentado tal, viviendas vacias por ejemplo, tal nivel de turisticas. Esto lleva a un regimen de tenencia que tal. Pero es asi en todos?
+
+- IPV. El IPV es un índice que mide la evolución de precios de las viviendas partiendo de una base 100 establecida por el precio en 2015. La media del IPV General, resultado del precio de todas las viviendas en el mercado es de 125, lo que indica un aumento del precio del 25% desde 2015. 
+
+En los boxplot observamos que el IPV General tiene varios outliers con un valor mucho más alto que la media. Vemos también  que esto se repite en los casos de IPV de vivienda de Segunda mano y de vivienda Nueva. El IPV general tiene un valor mucho más cercano al de IPV Segunda, lo que nos indica que en el mercado hay más compraventa de viviendas de segunda mano que de nueva construcción.
+
+Las CCAA donde ha aumentado más el precio de la vivienda son Madrid, Illes Balears, Barcelona, Ceuta y Melilla.
+
+```{r}
+
+# IPV
+mean(municipios$ipv2021General)
+mean(municipios$ipv2011General)
+
+ggplot(municipios, aes(x = 1, y = ipv2021General, fill = "ipv2021General")) +
+  geom_boxplot(position = posZition_dodge(width = 0.8), fill = "Orange") +
+  geom_boxplot(aes(x = 2, y = ipv2021Nueva, fill = "ipv2021Nueva"), position = position_dodge(width = 0.8), fill = "Blue") +
+  geom_boxplot(aes(x = 3, y = ipv2021Segunda, fill = "ipv2021Segunda"), position = position_dodge(width = 0.8), fill = "Green") +
+  scale_x_continuous(breaks = c(1, 2, 3), labels = c("ipv2021General", "ipv2021Nueva", "ipv2021Segunda")) +
+  labs(y = "Índice de Precio de Viviendas",
+       title = "Distribución del Índice de Precio de Viviendas por Tipo en 2021") +
+  theme_minimal()
+
+# top ipv 2021
+municipios |> 
+  distinct(CCAA, .keep_all = T) |> 
+  arrange(desc(ipv2021General)) |> 
+  slice(1:5)
+
+
+
+
+# Edad
+mean(compra21_r$VAREDAD)
+round(prop.table(table(compra21_r$VAREDAD)), digits = 3)
+hist(compra21_r$VAREDAD)
+
+# Número de orden
+round(prop.table(table(compra21_r$NORDEN)), digits = 3)
+(table(compra21_r$NORDEN))
+
+bxp<-ggplot(data,mapping=aes(x=Priorprograms))+geom_histogram(bins=15,fill="Orange",aes(y=..count../sum(..count..)))
+
+ggarrange(bxp,dp,db,ds,
+          ncol = 2, nrow = 2)
+
+
+
+```
+
+### RentaMedia2021
+
+Renta media disponible/neta personal. El valor medio de los municipios es 21236€ anuales. Sin embargo hay mucha variación entre municipios. El municipio con más renta es Pozuelo de Alarcón con un valor de 57977€, mientras el de renta más baja es Tudela en Navarra con 13443€.
+
+```{r}
+mean(municipios$RentaMedia2021)
+
+municipios |> 
+  arrange(desc(RentaMedia2021)) |> 
+  slice(1:3) |> 
+  select(PROV_LITERAL, MUN_LITERAL, RentaMedia2021)
+
+municipios |> 
+  arrange(RentaMedia2021) |> 
+  slice(1:3) |> 
+  select(PROV_LITERAL, MUN_LITERAL, RentaMedia2021)
+
+
+```
+
+### PorcentajeJoven
+
+La media del porcentaje de población joven en los municipios en 2021 es de 36%, mientras que en 2011 era 39%. Ha descendido la cantidad de jóvenes.
+
+Los municipios donde hay más población joven son Vícar en Almería probablemente por la alta presencia de temporeros jóvenes, 
+
+```{r}
+
+mean(municipios$PorcentajeJoven2021)
+mean(municipios$PorcentajeJoven2011)
+
+municipios |> 
+  arrange(desc(PorcentajeJoven2021)) |> 
+  slice(1:3) |> 
+  select(PROV_LITERAL, MUN_LITERAL, PorcentajeJoven2021)
+
+municipios |> 
+  arrange(PorcentajeJoven2021) |> 
+  slice(1:3) |> 
+  select(PROV_LITERAL, MUN_LITERAL, PorcentajeJoven2021)
+
+
+
+```
+
+
+## Descriptivo: en qué municios/provincia entonces ha aumentado la compra
+
+No, no es en todos. En estos municipios pasa tal. Hacer análisis por provincias y revisar los casos estos donde top herencia = top diferencia. Porque por ejemplo en Jaén 2000 no era por herencia, sino por temas de cesión.
+
+### Diferencia municipios
+
+```{r}
+
+propiedad |> 
+    distinct(AlquilerDifMun, .keep_all = TRUE) |> 
+  arrange(AlquilerDifMun) |> 
+    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL)
+
+propiedad |> 
+    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
+  arrange(AlquilerDifProv) |> 
+    select(AlquilerDifProv, PROV_LITERAL)
+
+```
+
+
+### Por municipios
+
+```{r}
+# Propiedad
+
+# Compra
+top_compra_2011 <- compra11 %>%
+  arrange(desc(Compra11Mun)) %>%
+  distinct(Compra11Mun, .keep_all = TRUE) |> 
+  select(Compra11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Herencia
+top_herencia_2011 <- compra11 %>%
+  arrange(desc(Herencia11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Herencia11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Alquiler
+top_alquiler_2011 <- compra11 %>%
+  arrange(desc(Alquiler11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Alquiler11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Otro
+top_otro_2011 <- compra11 %>%
+  arrange(desc(Otro11Mun)) %>%
+  distinct(cusec, .keep_all = TRUE) |> 
+  select(Otro11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+top_compra_2011
+top_herencia_2011
+top_alquiler_2011
+top_otro_2011
+
+```
+
+En 2021
+
+```{r}
+# Propiedad
+top_propiedad_2021 <- compra21 |> 
+    distinct(cusec, .keep_all = TRUE) |> 
+    arrange(desc(Propiedad21Mun)) |> 
+    select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Alquiler
+top_alquiler_2021 <- compra21 |> 
+    distinct(cusec, .keep_all = TRUE) |> 
+    arrange(desc(Alquiler21Mun)) |> 
+    select(Alquiler21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Otro
+top_otro_2021 <- compra21 |> 
+    distinct(cusec, .keep_all = TRUE) |> 
+    arrange(desc(Otro21Mun)) |> 
+    select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+top_propiedad_2021
+top_alquiler_2021
+top_otro_2021
+
+```
+
+
+### Por provincias
+
+```{r}
+# Compra
+top_compra_2011 <- compra11 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Compra11Prov)) |> 
+    select(Compra11Prov, PROV_LITERAL, CCAA)
+
+# Herencia
+top_herencia_2011 <- compra11 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Herencia11Prov)) |> 
+    select(Herencia11Prov, PROV_LITERAL, CCAA)
+
+# Alquiler
+top_alquiler_2011 <- compra11 %>%
+  arrange(desc(Alquiler11Prov)) %>%
+  distinct(CPRO, .keep_all = TRUE) |> 
+  select(Alquiler11Prov, PROV_LITERAL, CCAA)
+
+# Otro
+top_otro_2011 <- compra11 %>%
+  arrange(desc(Otro11Prov)) %>%
+  distinct(CPRO, .keep_all = TRUE) |> 
+  select(Otro11Prov, PROV_LITERAL, CCAA)
+
+top_compra_2011
+top_herencia_2011
+top_alquiler_2011
+top_otro_2011
+
+
+```
+
+En 2021
+
+```{r}
+
+# Propiedad
+top_propiedad_2021 <- compra21 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Propiedad21Prov)) |> 
+    select(Propiedad21Prov, PROV_LITERAL, CCAA)
+
+# Alquiler
+top_alquiler_2021 <- compra21 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Alquiler21Prov)) |> 
+    select(Alquiler21Prov, PROV_LITERAL, CCAA)
+
+# Otro
+top_otro_2021 <- compra21 |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Otro21Prov)) |> 
+    select(Propiedad21Mun, PROV_LITERAL, CCAA)
+
+top_propiedad_2021
+top_alquiler_2021
+top_otro_2021
+```
+
+
+## PCA
+
+Qué tienen estos municipios en común? Qué distingue unos de los otros? Pues vamos a ver los componentes y clusters
+
+Con 10 componentes explicamos el 88.4% de la variabilidad; con 5, el 70%. Dos son 41.2%.
+
+We first create a database keeping only the numeric columns which are going to contribute to our PCA analysis. We observe that with 7 components we explain 100% of variability, and with 2 we explain 65.3% of variability.
+
+COMRPOBAR SI TODO ES NUMERICO   
+
+```{r, fig.height=6, fig.width=12}
+
+# Keeping the names of municipalities and CCAA
+names = municipios$MUN_LITERAL
+prov = municipios$PROV_LITERAL
+ccaa = municipios$CCAA
+
+# Creating only numeric database
+numeric_data <- municipios %>%
+  ungroup() |> 
+  select_if(is.numeric) 
+
+# Creating the components
+pca = prcomp(numeric_data, scale=T)
+summary(pca)
+
+# Plot of the variability explained by components
+fviz_screeplot(pca, addlabels = TRUE)
+```
+
+Analizar cada componente
+```{r}
+barplot(pca$rotation[,1], las=2, col="darkblue")
+
+#Ranking of municipalities of this component
+names[order(pca$x[,1])][1:5]
+names[order(pca$x[,1], decreasing=T)][1:5]
+
+# Contribution of variables to component 1
+fviz_contrib(pca, choice = "var", axes = 1)
+
+```
+
+
+```{r}
+data.frame(z1 = pca$x[,1], z2 = pca$x[,2]) %>%
+  ggplot(aes(z1, z2, label = names, color = ccaa)) +
+  geom_point(size = 0) +
+  labs(title = "First two principal components (scores)", x = "PC1", y = "PC2") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  geom_text(size = 3, hjust = 0.6, vjust = 0, check_overlap = TRUE)
+
+```
+clusters
+```{r}
+numeric_data <- numeric_data |> 
+  ungroup()
+
+set.seed(123)
+fit <- kmeans(numeric_data, centers=2, nstart = 100)
+fit
+
+fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', pointsize=1)+
+  theme_minimal()+geom_text(label=names,hjust=0, vjust=0,size=2,check_overlap = F)+scale_fill_brewer(palette="Paired")
+
+```
+
+# cluster de reg tenen, con propiedad
+```{r}
+# Keeping the names of municipalities and CCAA
+names = propiedad$MUN_LITERAL
+prov = propiedad$PROV_LITERAL
+ccaa = propiedad$CCAA
+
+# Creating only numeric database
+numeric_data <- propiedad %>%
+  ungroup() |> 
+  select_if(is.numeric) |> 
+  select(Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun,  PropiedadDifMun, AlquilerDifMun, OtroDifMun)
+
+# Creating the components
+pca = prcomp(numeric_data, scale=T)
+summary(pca)
+
+# Plot of the variability explained by components
+fviz_screeplot(pca, addlabels = TRUE)
+
+barplot(pca$rotation[,1], las=2, col="darkblue")
+
+#Ranking of municipalities of this component
+names[order(pca$x[,1])][1:5]
+names[order(pca$x[,1], decreasing=T)][1:5]
+
+# Contribution of variables to component 1
+fviz_contrib(pca, choice = "var", axes = 1)
+
+
+data.frame(z1 = pca$x[,1], z2 = pca$x[,2]) %>%
+  ggplot(aes(z1, z2, label = names, color = ccaa)) +
+  geom_point(size = 0) +
+  labs(title = "First two principal components (scores)", x = "PC1", y = "PC2") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  geom_text(size = 3, hjust = 0.6, vjust = 0, check_overlap = TRUE)
+
+numeric_data <- numeric_data |> 
+  ungroup()
+
+set.seed(123)
+fit <- kmeans(numeric_data, centers=2, nstart = 100)
+fit
+
+fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', pointsize=1)+
+  theme_minimal()+geom_text(label=names,hjust=0, vjust=0,size=2,check_overlap = F)+scale_fill_brewer(palette="Paired")
+
+```
+
+
+## Modelo
+
+Vale, entonces cómo influye cada variable exactamente en el reg de tenencia?
+
+
+## Apuntes
+
+Parte del descriptivo de los individuos lo tengo ya hecho
+
+Preparar clusters etc copiandome del trabajo de advanced modelling. También tengo ahí texto que describe la pregunta de investigación, los análisis...
+
+- ¿Tipos de perfil de individuo comprante?
+
+Hacer cluster con solo regimenes de enencia de munis? ver diferencias entre si pierde otro, si pierde alquiler... como he analizao un poco.

@@ -1773,7 +1773,6 @@ compra_total %>%
     select(OtroDiMun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 
-
 ```
 
 ### Por provincia
@@ -1785,6 +1784,7 @@ compra_total <- compra_total |>
   mutate(
     PropiedadDifProv = Propiedad21Prov - Compra11Prov) |> 
   ungroup()
+
 
 View(compra_total %>%
     distinct(PropiedadDifProv, .keep_all = TRUE) |> 
@@ -1826,6 +1826,7 @@ compra_total <- compra_total |>
   mutate(
     PropiedadDifCCAA = Propiedad21CCAA - Compra11CCAA) |> 
   ungroup()
+
 
 compra_total %>%
     distinct(PropiedadDifCCAA, .keep_all = TRUE) |> 
@@ -2092,26 +2093,161 @@ propiedad <- propiedad11 |>
 
 ## Analisis por municipios
 
+Qué es realmente compra? qué método es más fiable?
+
+Para saber si mis resultados son realmente fiables y me muestran los municipios donde ha aumentado la compra examino mis resultados a partir de distintos métodos para medir el cambio en la compra entre 2011 y 2021. Esto es porque tengo dudas de la precisión de los resultados debido a las interferencias de la herencia desconocida en 2021.
+
+### Compra - propiedad
+
+Creo que este método es el menos fiable o preciso porque siempre me va a sobredimensionar la propiedad en municipios donde hay herencia. Por ejemplo el caso de Ourense \<=2000. Si resto propiedad 2021 - compra 2011, éste me sale en el top 7 y con un supuesto aumento de la propiedad/compra del 18%.
+
+Sin embargo, con todo propiedad está en el lugar 38 y el aumento es de solo un 1.44%. Además, en 2011 es el quinto municipio con más herencia de nuestra población objetivo (18% del total).
+
+| 2011         | 2021          |
+|--------------|---------------|
+| Alquiler 20% | Alquiler 14%  |
+| Compra 41%   | Propiedad 60% |
+| Herencia 18% | \-            |
+| Otro 20%     | Otro 24%      |
+
+Se ha reducido un poco el alquiler, pero tampoco podemos ver que ese 6% que se ha perdido sea para la compra, porque también vemos un aumento del 4% de Otro. Lo que vemos claramente es que en 2011 existía un 59% de propiedad, y en 2021 un 60%. Con lo cual, el supuesto aumento de un 18% en compra realmente es la parte que ya existía de herencia y quizá un ligero aumento real de la compra.
+
 ```{r}
+p<-propiedad11 %>%
+  filter(cusec == "32991") %>%
+  select(TENEN_VIV) |>
+  table()
+
+prop.table(p) * 100
+
+p <- compra21 %>%
+  filter(cusec == "32991") %>%
+  select(TENEN_VIV) %>%
+  table()
+
+prop.table(p) * 100
+
+```
+
+### Propiedad - propiedad
+
+Por ejemplo, el caso de Maó. Este municipio es el top 7 en aumento de propiedad (toda la propiedad) con cerca de un 10% de aumento. Con propiedad - compra, sale el 24. En 2011 aparece como el 4º municipio con menos compra, con sólo 34% y el quinto con más alquiler.
+
+| 2011         | 2021          |
+|--------------|---------------|
+| Alquiler 50% | Alquiler 42%  |
+| Compra 33%   | Propiedad 45% |
+| Herencia 2%  | \-            |
+| Otro 15%     | Otro 13%      |
+
+En este caso, un municipio que en 2011 tenía muy poca herencia y ha visto reducido el alquiler, es claro que el aumento en propiedad se debe mayoritariamente a la compra y un aumento de ésta; si bien no podamos estimar exactamente en qué medida por desconocer la herencia del 2021.
+
+Jaén 2000.
+
+| 2011        | 2021          |
+|-------------|---------------|
+| Alquiler 9% | Alquiler 8%   |
+| Compra 56%  | Propiedad 80% |
+| Herencia 9% | \-            |
+| Otro 24%    | Otro 12%      |
+
+Lugo 2000
+
+| 2011         | 2021          |
+|--------------|---------------|
+| Alquiler 19% | Alquiler 8%   |
+| Compra 44%   | Propiedad 64% |
+| Herencia 11% | \-            |
+| Otro 26%     | Otro 26%      |
+
+Úbeda
+
+| 2011         | 2021          |
+|--------------|---------------|
+| Alquiler 20% | Alquiler 9%   |
+| Compra 61%   | Propiedad 79% |
+| Herencia 5%  | \-            |
+| Otro 14%     | Otro 10%      |
+
+Nerja
+
+| 2011         | 2021          |
+|--------------|---------------|
+| Alquiler 39% | Alquiler 12%  |
+| Compra 47%   | Propiedad 75% |
+| Herencia 3%  | \-            |
+| Otro 11%     | Otro 12%      |
+
+Burjassot
+
+| 2011         | 2021          |
+|--------------|---------------|
+| Alquiler 11% | Alquiler 37%  |
+| Compra 82%   | Propiedad 42% |
+| Herencia 3%  | \-            |
+| Otro 4%      | Otro 19%      |
+
+```{r}
+p<-propiedad11 %>%
+  filter(cusec == "07032") %>%
+  select(TENEN_VIV) |>
+  table()
+
+prop.table(p) * 100
+
+p <- compra21 %>%
+  filter(cusec == "07032") %>%
+  select(TENEN_VIV) %>%
+  table()
+
+prop.table(p) * 100
+
+#Jaén 2000
+p<-propiedad11 %>%
+  filter(cusec == "23991") %>%
+  select(TENEN_VIV) |>
+  table()
+
+prop.table(p) * 100
+
+p <- compra21 %>%
+  filter(cusec == "23991") %>%
+  select(TENEN_VIV) %>%
+  table()
+
+prop.table(p) * 100
+
+
 # General
 table(propiedad11$TENEN_VIV)
 
 # Nerja
-propiedad11 %>%
+p<- propiedad11 %>%
   filter(cusec == 29075) %>%
   select(TENEN_VIV) %>%
   table()
 
+p <-compra21 %>%
+  filter(cusec == 29075) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+prop.table(p) * 100
+
+
 # Lugo 2000
-propiedad11 %>%
+p<- propiedad11 %>%
   filter(cusec == 27991) %>%
   select(TENEN_VIV) |>
-  nrow()
+  table()
 
-compra21 %>%
+prop.table(p) * 100
+
+
+p <- compra21 %>%
   filter(cusec == 27991) %>%
   select(TENEN_VIV) %>%
-  nrow()
+  table()
 
 # Jaén 2000
 propiedad11 %>%
@@ -2167,14 +2303,17 @@ compra21 %>%
   table()
 
 # Úbeda, top 2 ganancia de propiedad en Jaén menos 2k
-propiedad11 %>%
+p<-propiedad11 %>%
   filter(cusec == 23092) %>%
   select(TENEN_VIV) |>
   table()
-compra21 %>%
+  
+p<-compra21 %>%
   filter(cusec == 23092) %>%
   select(TENEN_VIV) %>%
   table()
+
+prop.table(p) * 100
 
 # Nerja
 propiedad11 %>%
@@ -2187,4 +2326,82 @@ compra21 %>%
   select(TENEN_VIV) %>%
   table()
 
+# Burjassot
+
+p<-propiedad11 %>%
+  filter(cusec == 46078) %>%
+  select(TENEN_VIV) |>
+  table()
+  
+p<-compra21 %>%
+  filter(cusec == 46078) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+prop.table(p) * 100
+
+
 ```
+
+### Reducción alquiler
+
+Lo de reducir alquiler
+
+Calp.
+
+| 2011         | 2021          |
+|--------------|---------------|
+| Alquiler 38% | Alquiler 27%  |
+| Compra 52%   | Propiedad 57% |
+| Herencia 4%  | \-            |
+| Otro 5%      | Otro 13%      |
+
+En este caso, un municipio que en 2011 tenía bastante alquiler, ha visto cómo este se reduce pero manteniendo una propiedad igual. Lo que ha aumentado es 'Otro'.
+
+```{r}
+p<-propiedad11 %>%
+  filter(cusec == "03047") %>%
+  select(TENEN_VIV) |>
+  table()
+
+prop.table(p) * 100
+
+p <- compra21 %>%
+  filter(cusec == "03047") %>%
+  select(TENEN_VIV) %>%
+  table()
+
+prop.table(p) * 100
+
+
+```
+
+### Nerja
+
+El caso de Nerja: municipio donde más ha aumentado la compra en ambos casos, y más reducción de alquiler
+
+| 2011         | 2021          |
+|--------------|---------------|
+| Alquiler 38% | Alquiler 12%  |
+| Compra 46%   | Propiedad 75% |
+| Herencia 3%  | \-            |
+| Otro 11%     | Otro 12%      |
+
+```{r}
+# Nerja
+propiedad11 %>%
+  filter(cusec == 29075) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+compra21 %>%
+  filter(cusec == 29075) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+
+prop.table(p) * 100
+
+```
+
+Con lo cual, no voy a sacar resultados exactos de cuánto ha aumentado la compra en cada municipio por la interferencia de la herencia. Pero sí voy a poder ver tendencias y similiritudes entre los municipios donde ha aumentado la compra, aunque no sepa exactamente el porcentaje que ha aumentado. Considero que este es mi objetivo al fin y al cabo: discernir en qué tipo de municipio ha aumentado la compra, que es un perfil muy distinto al de municipios donde ha aumentado muchísimo el alquiler.
