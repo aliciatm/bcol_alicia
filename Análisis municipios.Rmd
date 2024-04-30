@@ -126,7 +126,7 @@ municipios |>
 ```
 
 
-## Descriptivo: en qué municios/provincia entonces ha aumentado la compra
+# Descriptivo: en qué municios/provincia entonces ha aumentado la compra
 
 No, no es en todos. En estos municipios pasa tal. Hacer análisis por provincias y revisar los casos estos donde top herencia = top diferencia. Porque por ejemplo en Jaén 2000 no era por herencia, sino por temas de cesión.
 
@@ -134,17 +134,84 @@ No, no es en todos. En estos municipios pasa tal. Hacer análisis por provincias
 
 ```{r}
 
-propiedad |> 
-    distinct(AlquilerDifMun, .keep_all = TRUE) |> 
-  arrange(AlquilerDifMun) |> 
-    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL)
+# Propiedad
+dif_propiedad_mun <- propiedad |> 
+    distinct(PropiedadDifMun, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifMun)) |> 
+    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
-propiedad |> 
-    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
-  arrange(AlquilerDifProv) |> 
-    select(AlquilerDifProv, PROV_LITERAL)
+# Alquiler
+
+dif_alquiler_mun <- propiedad %>%
+    distinct(AlquilerDifMun, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifMun)) %>%
+    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Otro
+
+dif_otro_mun <- propiedad %>%
+    distinct(OtroDifMun, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifMun)) %>%
+    select(OtroDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
 
 ```
+
+### Diferencia provincias
+
+```{r}
+
+# Propiedad
+dif_propiedad_prov <- propiedad |> 
+    distinct(PropiedadDifProv, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifProv)) |> 
+    select(PropiedadDifProv, PROV_LITERAL, CCAA)
+
+# Alquiler
+
+dif_alquiler_prov <- propiedad %>%
+    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifProv)) %>%
+    select(AlquilerDifProv, PROV_LITERAL, CCAA)
+
+# Otro
+
+dif_otro_prov <- propiedad %>%
+    distinct(OtroDifProv, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifProv)) %>%
+    select(OtroDifProv, PROV_LITERAL, CCAA)
+
+```
+
+### Por CCAA
+
+```{r}
+# Propiedad
+dif_propiedad_ccaa <- propiedad |> 
+    distinct(PropiedadDifCCAA, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifCCAA)) |> 
+    select(PropiedadDifCCAA, PROV_LITERAL, CCAA)
+
+# Alquiler
+
+dif_alquiler_prov <- propiedad %>%
+    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifProv)) %>%
+    select(AlquilerDifProv, PROV_LITERAL, CCAA)
+
+# Otro
+
+dif_otro_prov <- propiedad %>%
+    distinct(OtroDifProv, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifProv)) %>%
+    select(OtroDifProv, PROV_LITERAL, CCAA)
+
+
+```
+
+
+
+### Mapa Provincias
 
 
 ### Por municipios

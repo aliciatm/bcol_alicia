@@ -1250,6 +1250,6 @@ Analisis: desccriptivo de un municipio de cada cluster
 ```{r}
 
 library(openxlsx)
-write.xlsx(municipios, "municipios.xlsx")
+#write.xlsx(municipios, "municipios.xlsx")
 
 ```
