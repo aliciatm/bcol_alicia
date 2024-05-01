@@ -26,6 +26,14 @@ library(ggpubr)
 ```{r}
 
 municipios <- read_xlsx("municipios.xlsx")
+
+municipios <- municipios |> 
+  select(-OtroDifMun.x) |> 
+  mutate(OtroDifMun = OtroDifMun.y)
+
+propiedad <- read_xlsx("propiedad.xlsx")
+
+
 ```
 
 ## Descriptivo de lss variables de municipios
@@ -130,89 +138,218 @@ municipios |>
 
 No, no es en todos. En estos municipios pasa tal. Hacer análisis por provincias y revisar los casos estos donde top herencia = top diferencia. Porque por ejemplo en Jaén 2000 no era por herencia, sino por temas de cesión.
 
-### Diferencia municipios
-
-```{r}
-
-# Propiedad
-dif_propiedad_mun <- propiedad |> 
-    distinct(PropiedadDifMun, .keep_all = TRUE) |> 
-  arrange(desc(PropiedadDifMun)) |> 
-    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
-
-# Alquiler
-
-dif_alquiler_mun <- propiedad %>%
-    distinct(AlquilerDifMun, .keep_all = TRUE) |> 
-  arrange(desc(AlquilerDifMun)) %>%
-    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
-
-# Otro
-
-dif_otro_mun <- propiedad %>%
-    distinct(OtroDifMun, .keep_all = TRUE) |> 
-  arrange(desc(OtroDifMun)) %>%
-    select(OtroDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
-
-
-```
-
-### Diferencia provincias
-
-```{r}
-
-# Propiedad
-dif_propiedad_prov <- propiedad |> 
-    distinct(PropiedadDifProv, .keep_all = TRUE) |> 
-  arrange(desc(PropiedadDifProv)) |> 
-    select(PropiedadDifProv, PROV_LITERAL, CCAA)
-
-# Alquiler
-
-dif_alquiler_prov <- propiedad %>%
-    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
-  arrange(desc(AlquilerDifProv)) %>%
-    select(AlquilerDifProv, PROV_LITERAL, CCAA)
-
-# Otro
-
-dif_otro_prov <- propiedad %>%
-    distinct(OtroDifProv, .keep_all = TRUE) |> 
-  arrange(desc(OtroDifProv)) %>%
-    select(OtroDifProv, PROV_LITERAL, CCAA)
-
-```
-
-### Por CCAA
-
-```{r}
-# Propiedad
-dif_propiedad_ccaa <- propiedad |> 
-    distinct(PropiedadDifCCAA, .keep_all = TRUE) |> 
-  arrange(desc(PropiedadDifCCAA)) |> 
-    select(PropiedadDifCCAA, PROV_LITERAL, CCAA)
-
-# Alquiler
-
-dif_alquiler_prov <- propiedad %>%
-    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
-  arrange(desc(AlquilerDifProv)) %>%
-    select(AlquilerDifProv, PROV_LITERAL, CCAA)
-
-# Otro
-
-dif_otro_prov <- propiedad %>%
-    distinct(OtroDifProv, .keep_all = TRUE) |> 
-  arrange(desc(OtroDifProv)) %>%
-    select(OtroDifProv, PROV_LITERAL, CCAA)
-
-
-```
-
-
-
 ### Mapa Provincias
+### En 2011
 
+```{r, fig.height=6, fig.width=12}
+
+library(mapSpain)
+  
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- propiedad |> 
+  select(CPRO, Propiedad11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+# Propiedad
+p1 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Propiedad11Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Propiedad11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de propiedad por provincia 2011") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+# Herencia o donación
+
+mapa <- propiedad |> 
+  select(CPRO, Herencia11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p2 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Herencia11Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Herencia11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de herencia/donación por provincia 2011") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+# Alquiler
+mapa <- propiedad |> 
+  select(CPRO, Alquiler11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p3 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Alquiler11Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Alquiler11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de alquiler por provincia 2011") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+# Otro
+mapa <- propiedad |> 
+  select(CPRO, Otro11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p4 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Otro11Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Otro11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de otro por provincia 2011") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+
+ggarrange(p1, p2, p3, p4, ncol=2, nrow = 2)
+
+```
+
+### En 2021
+
+```{r, fig.height=6, fig.width=12}
+
+library(mapSpain)
+  
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+  
+ccaa <- esp_get_ccaa() |> 
+  mutate(codauto = codauto)
+
+mapa <- propiedad |> 
+  select(CPRO, Propiedad21Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+# Propiedad
+p1 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Propiedad21Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Propiedad21Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de propiedad por provincia 2021") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+# Alquiler
+mapa <- propiedad |> 
+  select(CPRO, Alquiler21Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p2 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Alquiler21Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Alquiler21Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de alquiler por provincia 2021") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+# Otro
+mapa <- propiedad |> 
+  select(CPRO, Otro21Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p3 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Otro21Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Otro21Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de otro por provincia 2021") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+
+ggarrange(p1, p2, p3, ncol=2, nrow = 2)
+
+
+```
+
+
+# Regímenes de tenencia
+### 2011
 
 ### Por municipios
 
@@ -313,7 +450,7 @@ top_otro_2011
 
 ```
 
-En 2021
+### 2021
 
 ```{r}
 
@@ -340,6 +477,83 @@ top_alquiler_2021
 top_otro_2021
 ```
 
+# Diferencia entre años
+
+### Municipios
+
+```{r}
+
+# Propiedad
+dif_propiedad_mun <- propiedad |> 
+    distinct(PropiedadDifMun, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifMun)) |> 
+    select(PropiedadDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Alquiler
+
+dif_alquiler_mun <- propiedad %>%
+    distinct(AlquilerDifMun, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifMun)) %>%
+    select(AlquilerDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
+
+# Otro
+
+dif_otro_mun <- propiedad %>%
+    distinct(OtroDifMun, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifMun)) %>%
+    select(OtroDifMun, MUN_LITERAL, PROV_LITERAL, CCAA)
+```
+
+### Provincias
+
+```{r}
+
+# Propiedad
+dif_propiedad_prov <- propiedad |> 
+    distinct(PropiedadDifProv, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifProv)) |> 
+    select(PropiedadDifProv, PROV_LITERAL, CCAA)
+
+# Alquiler
+
+dif_alquiler_prov <- propiedad %>%
+    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifProv)) %>%
+    select(AlquilerDifProv, PROV_LITERAL, CCAA)
+
+# Otro
+
+dif_otro_prov <- propiedad %>%
+    distinct(OtroDifProv, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifProv)) %>%
+    select(OtroDifProv, PROV_LITERAL, CCAA)
+
+```
+
+### CCAA
+
+```{r}
+# Propiedad
+dif_propiedad_ccaa <- propiedad |> 
+    distinct(PropiedadDifCCAA, .keep_all = TRUE) |> 
+  arrange(desc(PropiedadDifCCAA)) |> 
+    select(PropiedadDifCCAA, PROV_LITERAL, CCAA)
+
+# Alquiler
+
+dif_alquiler_prov <- propiedad %>%
+    distinct(AlquilerDifProv, .keep_all = TRUE) |> 
+  arrange(desc(AlquilerDifProv)) %>%
+    select(AlquilerDifProv, PROV_LITERAL, CCAA)
+
+# Otro
+
+dif_otro_prov <- propiedad %>%
+    distinct(OtroDifProv, .keep_all = TRUE) |> 
+  arrange(desc(OtroDifProv)) %>%
+    select(OtroDifProv, PROV_LITERAL, CCAA)
+
+```
 
 ## PCA
 
@@ -352,6 +566,14 @@ We first create a database keeping only the numeric columns which are going to c
 COMRPOBAR SI TODO ES NUMERICO   
 
 ```{r, fig.height=6, fig.width=12}
+
+todopropiedad <- propiedad |> 
+  select(cusec, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun, PropiedadDifMun, AlquilerDifMun, OtroDifMun)
+
+municipios <- municipios |> 
+  select(-Propiedad21Mun, -Alquiler21Mun, -Otro21Mun, -Compra11Mun, -Herencia11Mun, -Alquiler11Mun, -Otro11Mun, -PropiedadDifMun, -AlquilerDifMun) |> 
+  left_join(todopropiedad, by = "cusec") 
+
 
 # Keeping the names of municipalities and CCAA
 names = municipios$MUN_LITERAL
@@ -417,7 +639,7 @@ prov = propiedad$PROV_LITERAL
 ccaa = propiedad$CCAA
 
 # Creating only numeric database
-numeric_data <- propiedad %>%
+numeric_data <- municipios %>%
   ungroup() |> 
   select_if(is.numeric) |> 
   select(Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun,  PropiedadDifMun, AlquilerDifMun, OtroDifMun)
@@ -463,6 +685,39 @@ fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', 
 ## Modelo
 
 Vale, entonces cómo influye cada variable exactamente en el reg de tenencia?
+
+Si quito variables como secundarias, vacias, protegidas... el precio alquiler no toma mas relevancia. Parecen más relevantes esas características dle mercado que el precio.
+
+```{r}
+
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, RentaMedia2021, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola, PrecioHipoteca2021Prov, ParoJuvenil2011, PorcentajeProtegidas2021, ProtegidaDif,PrecioAlquilerM2)
+
+independientes$HABITAT <- as.factor(municipios$HABITAT) 
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+
+summary(modelo)
+
+# Logit (no va)
+
+independientes <- independientes |> 
+  mutate(Propiedad = factor(ifelse(PropiedadDifMun < 0, 0, 1), levels = c(0, 1), labels = c("Descenso", "Aumento")))
+
+modelo <- glm(Propiedad ~ ., data = independientes, family = "binomial")
+summary(modelo)
+
+
+
+# Modelo para explicar precio alquiler con 0.84 R2
+modelo <- lm(PrecioAlquilerM2 ~ ., data = numeric_data)
+
+summary(modelo)
+
+
+
+```
+
 
 
 ## Apuntes

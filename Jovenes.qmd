@@ -2369,7 +2369,7 @@ compra21 <- compra21 |>
 # Crear diferencia -------------------------
 
 tenencia11 <- compra11 |> 
-  select(cusec, CPRO, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun, Propiedad11Prov, Herencia11Prov, Alquiler11Prov, Otro11Prov, Propiedad11CCAA, Alquiler11CCAA, Otro11CCAA) |> 
+  select(cusec, CPRO, Compra11Mun, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun, Propiedad11Prov, Herencia11Prov, Alquiler11Prov, Otro11Prov, Propiedad11CCAA, Herencia11CCAA, Alquiler11CCAA, Otro11CCAA) |> 
   distinct(cusec, .keep_all = T)
 
 tenencia21 <- compra21 |> 
@@ -2397,10 +2397,6 @@ propiedad <- propiedad |>
   distinct(cusec, .keep_all=T) |> 
   select(-CPRO.y) |> 
   mutate(CPRO=CPRO.x)
-
-propiedad_con_na <- propiedad %>%
-  filter_all(any_vars(is.na(.)))
-
 
 library(openxlsx)
 write.xlsx(propiedad, "propiedad.xlsx")
