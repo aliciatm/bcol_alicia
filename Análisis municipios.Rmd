@@ -27,12 +27,7 @@ library(ggpubr)
 
 municipios <- read_xlsx("municipios.xlsx")
 
-municipios <- municipios |> 
-  select(-OtroDifMun.x) |> 
-  mutate(OtroDifMun = OtroDifMun.y)
-
 propiedad <- read_xlsx("propiedad.xlsx")
-
 
 ```
 
@@ -53,7 +48,7 @@ mean(municipios$ipv2021General)
 mean(municipios$ipv2011General)
 
 ggplot(municipios, aes(x = 1, y = ipv2021General, fill = "ipv2021General")) +
-  geom_boxplot(position = posZition_dodge(width = 0.8), fill = "Orange") +
+  geom_boxplot(position = position_dodge(width = 0.8), fill = "Orange") +
   geom_boxplot(aes(x = 2, y = ipv2021Nueva, fill = "ipv2021Nueva"), position = position_dodge(width = 0.8), fill = "Blue") +
   geom_boxplot(aes(x = 3, y = ipv2021Segunda, fill = "ipv2021Segunda"), position = position_dodge(width = 0.8), fill = "Green") +
   scale_x_continuous(breaks = c(1, 2, 3), labels = c("ipv2021General", "ipv2021Nueva", "ipv2021Segunda")) +
@@ -565,6 +560,18 @@ We first create a database keeping only the numeric columns which are going to c
 
 COMRPOBAR SI TODO ES NUMERICO   
 
+
+### Poner provincia en municipios pequeños
+
+```{r}
+municipios <- municipios |> 
+    mutate(MUN_LITERAL = ifelse(grepl("\\d", MUN_LITERAL), paste(MUN_LITERAL, PROV_LITERAL), MUN_LITERAL))
+
+
+```
+
+pca
+
 ```{r, fig.height=6, fig.width=12}
 
 todopropiedad <- propiedad |> 
@@ -573,6 +580,13 @@ todopropiedad <- propiedad |>
 municipios <- municipios |> 
   select(-Propiedad21Mun, -Alquiler21Mun, -Otro21Mun, -Compra11Mun, -Herencia11Mun, -Alquiler11Mun, -Otro11Mun, -PropiedadDifMun, -AlquilerDifMun) |> 
   left_join(todopropiedad, by = "cusec") 
+
+municipios <- municipios |> 
+  select(-OtroDifMun.x) |> 
+  mutate(OtroDifMun = OtroDifMun.y)
+
+municipios <- municipios |> 
+  select(MUN_LITERAL, PROV_LITERAL, CCAA, PropiedadDifMun, AlquilerDifMun, OtroDifMun, Herencia11Mun, RentaMedia2021, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeEspañola, PorcentajeProtegidas2021, ProtegidaDif,PrecioAlquilerM2)
 
 
 # Keeping the names of municipalities and CCAA
@@ -586,6 +600,7 @@ numeric_data <- municipios %>%
   select_if(is.numeric) 
 
 # Creating the components
+set.seed(123)
 pca = prcomp(numeric_data, scale=T)
 summary(pca)
 
@@ -593,131 +608,199 @@ summary(pca)
 fviz_screeplot(pca, addlabels = TRUE)
 ```
 
-Analizar cada componente
-```{r}
-barplot(pca$rotation[,1], las=2, col="darkblue")
 
-#Ranking of municipalities of this component
-names[order(pca$x[,1])][1:5]
-names[order(pca$x[,1], decreasing=T)][1:5]
+### Analizar cada componente
 
-# Contribution of variables to component 1
-fviz_contrib(pca, choice = "var", axes = 1)
+*Componente 1*. Las variables que más contribuyen a este componente es PorcentajeVacías2021, PorcentajeSecundarias2021, PrecioAlquilerM2 y PorcentajeProtegidas2021. Son variables relacionadas con el mercado de vivienda en sí de los municipios, no tiene relación cosas como la diferencia en regímenes de tenencia o características de la población juvenil.
 
-```
+- PorcentajeVacías2021. Muy alto porcentaje de viviendas vacías.
+- PorcentajeSecundarias2021. Muy alto porcentaje de viviendas secundarias.
+- PrecioAlquilerM2. Muy bajo el precio de alquiler.
+- PorcentajeProtegidas2021. Muy pocas viviendas protegidas.
+- PropiedadDifMun. Aumento significativo de la propiedad en el municipio.
+- AlquilerDifMun. Gran descenso del alquiler.
+- OtroDifMun. Ligero aumento de 'otro'.
+- Herencia11Mun. Bastante herencia de viviendas principales en los municipios.
+
+Los municipios con más puntuación en este componente son municipios muy pequeños de Ourense y Lugo. Son municipios rurales con pocas personas jóvenes residentes, con gran cantidad de viviendas secundarias o vacías, bajo precio... También vemos que tienen más herencia que otros municipios, gran reducción del alquiler y aumento de la propiedad y de 'Otro'.
+
+Por otra parte, los municipios con menor puntuación son municipios con muy pocas viviendas vacías, un alquiler caro, o además con muchas viviendas protegidas como Ceuta. Tampoco han experimentado un aumento de la propiedad significativo.
 
 
-```{r}
-data.frame(z1 = pca$x[,1], z2 = pca$x[,2]) %>%
-  ggplot(aes(z1, z2, label = names, color = ccaa)) +
-  geom_point(size = 0) +
-  labs(title = "First two principal components (scores)", x = "PC1", y = "PC2") +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  geom_text(size = 3, hjust = 0.6, vjust = 0, check_overlap = TRUE)
-
-```
-clusters
-```{r}
-numeric_data <- numeric_data |> 
-  ungroup()
-
-set.seed(123)
-fit <- kmeans(numeric_data, centers=2, nstart = 100)
-fit
-
-fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', pointsize=1)+
-  theme_minimal()+geom_text(label=names,hjust=0, vjust=0,size=2,check_overlap = F)+scale_fill_brewer(palette="Paired")
-
-```
-
-# cluster de reg tenen, con propiedad
-```{r}
-# Keeping the names of municipalities and CCAA
-names = propiedad$MUN_LITERAL
-prov = propiedad$PROV_LITERAL
-ccaa = propiedad$CCAA
-
-# Creating only numeric database
-numeric_data <- municipios %>%
-  ungroup() |> 
-  select_if(is.numeric) |> 
-  select(Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun,  PropiedadDifMun, AlquilerDifMun, OtroDifMun)
-
-# Creating the components
-pca = prcomp(numeric_data, scale=T)
-summary(pca)
-
-# Plot of the variability explained by components
-fviz_screeplot(pca, addlabels = TRUE)
-
-barplot(pca$rotation[,1], las=2, col="darkblue")
-
-#Ranking of municipalities of this component
-names[order(pca$x[,1])][1:5]
-names[order(pca$x[,1], decreasing=T)][1:5]
+```{r, fig.height=6, fig.width=12}
 
 # Contribution of variables to component 1
 fviz_contrib(pca, choice = "var", axes = 1)
 
+# Plot adjustments
+n <- 10
+col_pos <- colorRampPalette(c("#CCE6CC", "#208909"))(n)
+col_neg <- colorRampPalette(c("#FFE6E6", "#B30000"))(n)
+coefs <- pca$rotation[,1]
+valor_max <- max(coefs)
+valor_min <- min(coefs)
+coefs_ajustados <- coefs - valor_min + 1
+colores <- ifelse(coefs >= 0, col_pos[ceiling((coefs_ajustados / (valor_max - valor_min + 1)) * n)], 
+                  col_neg[ceiling((abs(coefs_ajustados) / (valor_max - valor_min + 1)) * n)])
 
-data.frame(z1 = pca$x[,1], z2 = pca$x[,2]) %>%
-  ggplot(aes(z1, z2, label = names, color = ccaa)) +
-  geom_point(size = 0) +
-  labs(title = "First two principal components (scores)", x = "PC1", y = "PC2") +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  geom_text(size = 3, hjust = 0.6, vjust = 0, check_overlap = TRUE)
+# Plot
+barplot(coefs, las = 2, col = colores, cex.names = 0.8)
 
-numeric_data <- numeric_data |> 
-  ungroup()
+#Ranking of municipalities of this component
+names[order(pca$x[,1], decreasing=T)][1:5]
+names[order(pca$x[,1])][1:5]
 
-set.seed(123)
-fit <- kmeans(numeric_data, centers=2, nstart = 100)
-fit
-
-fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', pointsize=1)+
-  theme_minimal()+geom_text(label=names,hjust=0, vjust=0,size=2,check_overlap = F)+scale_fill_brewer(palette="Paired")
 
 ```
 
+*Componente 2*. Las variables más relevantes en el componente 2 es PropiedadDifMun, OtroDifMun, ProtegidaDif, PorcentajeProtegidas2021. Básicamente, ahora sí entran en juego los regímenes de tenencia.
+
+- PropiedadDifMun. Ha aumentado muchísimo la propiedad.
+- OtroDifMun. Se ha reducido mucho el régimen 'Otro'. 
+- ProtegidaDif. Se ha reducido mucho las viviendas protegidas.
+- PorcentajeProtegidas2021. La cantidad de viviendas protegidas es alta.
+- PorcentajeJovenDif. Un aumento de la cantidad de jóvenes.
+- PrecioAlquilerM2. Un precio mediano del alquiler.
+
+Los municipios con mayor puntuación son Ceuta, Zarautz, Pozuelo de Alarcón y Nerja. Estos primeros 3 municipios no tienen un aumento muy significativo de la propiedad, si bien por lo menos no es un descenso. Lo que hace que aparezcan aquí es la cantidad de viviendas protegidas. Este valor es por CCAA, no por municipio. Con lo cual, parece que este componente está agrupando a muchos municipios de la misma CCAA (Madrid, Navarra) sólo por tener ese valor de viviendas protegidas, y porque no tienen un descenso en la propiedad. 
+
+En el caso de Nerja y Jaén, es el caso contrario: aparecen por un gran aumento en la propiedad pero la cantidad de viviendas protegidas es reducida.
+
+```{r, fig.height=6, fig.width=12}
+
+# Contribution of variables to component 1
+fviz_contrib(pca, choice = "var", axes = 2)
+
+# Plot adjustments
+coefs <- pca$rotation[,2]
+valor_max <- max(coefs)
+valor_min <- min(coefs)
+coefs_ajustados <- coefs - valor_min + 1
+colores <- ifelse(coefs >= 0, col_pos[ceiling((coefs_ajustados / (valor_max - valor_min + 1)) * n)], 
+                  col_neg[ceiling((abs(coefs_ajustados) / (valor_max - valor_min + 1)) * n)])
+
+# Plot
+barplot(coefs, las = 2, col = colores, cex.names = 0.8)
+
+#Ranking of municipalities of this component
+names[order(pca$x[,2], decreasing=T)][1:5]
+names[order(pca$x[,2])][1:5]
+
+```
+
+### Plot de componentes
+
+Ahora podemos analizar el siguiente gráfico que posiciona los municipios en los ejes según su puntuación en cada uno de los dos primeros componentes. 
+
+P1: Muchas vacías, secundarias, muy pocas protegidas, alquiler bajo, aumento propiedad y mucho descenso alquiler
+
+P2: Mucha vivienda protegida, mucho aumento propiedad
+
+Con respecto al eje X, del PC1, vemos que a la derecha se encuentran municipios con más puntuación. Son municipios con muchas viviendas vacías o secundarias, así como un aumento de la propiedad. Están pequeños pueblos gallegos, de las islas, andaluces, y otras provincias que no son capitales de comunidad. En la izquierda vemos municipios con muy pocas viviendas secundarias/vacías, o sea, pocas viviendas 'que sobren'. Municipios madrileños caros, con renta alta. También País Vasco, Cataluña... Conforme nos acercamos de la izquierda al centro vemos municipios que se van alejando de esta definición, pero siguen siendo ciudades 'relevantes', con bastante ocupación de las viviendas: albacete, Granada, El Ejido. Destaca el caso de Ceuta por su poca cantidad de viviendas vacías y secundarias debido a su poco territorio, así como un precio de alquiler que entraría en el 20% más caro de todos los municipios.
+
+En el eje Y, PC2, se centra más en la presencia de vivienda protegida y aumento de la propiedad. También en aumento de personas jóvenes y precio mediano de alquiler. Ceuta se posiciona en primer lugar por ser el municipio con más cantidad de vivienda protegida. También tiene un aumento en la propiedad (si bien es ligero). Por otra parte, vemos que los municipios se sitúan todos en una posición del eje Y similar, no hay tantas diferencias como en el primer componente. El municipio con menor puntuación es pueblos de menos de 2000-5000 habitantes de Las Palmas, con poca vivienda protegida y un gran descenso de la propiedad.
+
+```{r, fig.height=7, fig.width=14}
+p <-data.frame(z1 = pca$x[,1], z2 = pca$x[,2]) %>%
+  ggplot(aes(z1, z2, label = names, color = ccaa)) +
+  geom_point(size = 0) +
+  labs(title = "First two principal components (scores)", x = "PC1", y = "PC2") +  theme_bw() +   theme(legend.position = "bottom") +
+  geom_text(size = 3, hjust = 0.6, vjust = 0, check_overlap = T)
+
+p
+
+# Versión interactiva
+ggplotly(p)
+
+```
+
+### Aplly clustering tools and interpret
+
+Usando el método wss y silhouette sugiere utilizar 3 clusters. Con gap_stat sugiere 6.
+
+```{r}
+
+#fviz_nbclust(scale(numeric_data), kmeans, method = 'wss', k.max = 20, nstart = 1000)
+
+#fviz_nbclust(scale(numeric_data), kmeans, method = 'silhouette', k.max = 20, nstart = 1000)
+
+#fviz_nbclust(scale(numeric_data), kmeans, method = 'gap_stat', k.max = 10, nstart = 100, nboot = 100)
+
+```
+
+```{r, fig.height=6, fig.width=12}
+set.seed(123)
+fit <- kmeans(numeric_data, centers=3, nstart = 100)
+fit
+
+fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', pointsize=1)+
+  theme_minimal()+geom_text(label=names,hjust=0, vjust=0,size=2,check_overlap = T)+scale_fill_brewer(palette="Paired")
+
+```
+
+Realmente los clusters no me están explicando tanto.
 
 ## Modelo
 
 Vale, entonces cómo influye cada variable exactamente en el reg de tenencia?
 
-Si quito variables como secundarias, vacias, protegidas... el precio alquiler no toma mas relevancia. Parecen más relevantes esas características dle mercado que el precio.
+Si quito variables como secundarias, vacias, protegidas... el precio alquiler no toma mas relevancia. Parecen más relevantes esas características del mercado que el precio o características de la población.
 
 ```{r}
 
 independientes <- numeric_data |> 
-  select(PropiedadDifMun, ipv2021General, RentaMedia2021, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola, PrecioHipoteca2021Prov, ParoJuvenil2011, PorcentajeProtegidas2021, ProtegidaDif,PrecioAlquilerM2)
-
-independientes$HABITAT <- as.factor(municipios$HABITAT) 
+  select(PropiedadDifMun, RentaMedia2021, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeEspañola, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2)
 
 modelo <- lm(PropiedadDifMun ~ ., data = independientes)
 
 summary(modelo)
 
-# Logit (no va)
 
-independientes <- independientes |> 
-  mutate(Propiedad = factor(ifelse(PropiedadDifMun < 0, 0, 1), levels = c(0, 1), labels = c("Descenso", "Aumento")))
+```
 
-modelo <- glm(Propiedad ~ ., data = independientes, family = "binomial")
+### Logit
+
+La accuracy es muy alta pero claro porque las clases están super desequilibradas, entonces con que acierte sólo 7 de los aumentos da un 91%.
+```{r}
+
+# Preparar datos
+municipios <- read_xlsx("municipios.xlsx")
+propiedad <- read_xlsx("propiedad.xlsx")
+
+municipios <- municipios |> 
+    mutate(MUN_LITERAL = ifelse(grepl("\\d", MUN_LITERAL), paste(MUN_LITERAL, PROV_LITERAL), MUN_LITERAL))
+
+numeric_data <- numeric_data %>%
+  mutate(Propiedad = ifelse(PropiedadDifMun >= 0, 1, 0)) %>%
+  select(Propiedad, RentaMedia2021, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeEspañola, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2) 
+# Modelo
+modelo <- glm(Propiedad ~ ., data = numeric_data, family = binomial(link = "logit"))
+
 summary(modelo)
 
+# Matriz de confusión
+prob_pred <- predict(modelo, type = "response")
+clases_pred <- ifelse(prob_pred > 0.5, 1, 0)
 
+table(Real = numeric_data$Propiedad, Predicho = clases_pred)
+
+# Accuracy
+sum(diag(confusion_matrix)) / sum(confusion_matrix)
+
+
+```
+
+
+### Modelo precio alquiler
+
+```{r}
 
 # Modelo para explicar precio alquiler con 0.84 R2
 modelo <- lm(PrecioAlquilerM2 ~ ., data = numeric_data)
 
 summary(modelo)
 
-
-
 ```
-
 
 
 ## Apuntes
