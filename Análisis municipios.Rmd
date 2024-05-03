@@ -728,14 +728,52 @@ Usando el método wss y silhouette sugiere utilizar 3 clusters. Con gap_stat sug
 
 ```
 
-```{r, fig.height=6, fig.width=12}
+Qué es cada cluster
+
+Cluster 1. Municipios con poco descenso de propiedad (-10%), descenso moderado del alquiler y gran descenso de 'Otro'. Baja herencia en 2011. Alta renta media, bastante personas jóvenes e incuso aumento de juventud. Pocas viviendas vacías y secundarias, poca población española, bastantes viviendas protegidas pero gran descenso (si hay más viviendas, lógico que el descenso sea mayor). Renta media alta.
+
+Algunos ejemplos de este cluster, ordenados de más aumento de propiedad a menos, son 
+
+Ver ejemplos y ver si lo cumplne. Podemos idstuinguir aumento distinto entre municipios muy chicos, y municipios pijos?
+
+Tal vez poner mi variable binaria de Propiedad?   
+```{r}
+
 set.seed(123)
-fit <- kmeans(numeric_data, centers=3, nstart = 100)
+fit <- kmeans(numeric_data, centers=6, nstart = 100)
 fit
+
+numeric_data$cluster <- fit$cluster
+
+centers=fit$centers
+
+scaled_centers <- scale(fit$centers)
+
+barplot(scaled_centers[1,], las=2, col="#097969")
+barplot(scaled_centers[2,], las=2, col="#097969")
+barplot(scaled_centers[5,], las=2, col="#097969")
+
+```
+
+Probando cositas
+```{r}
+scaled_numeric_data <- scale(numeric_data)
+
+# Realizar el clustering con K-means en los datos estandarizados
+fit <- kmeans(scaled_numeric_data, centers = 6, nstart = 100)
+fit
+
+
+```
+
+
+Clusplot
+
+```{r, fig.height=6, fig.width=12}
+
 
 fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', pointsize=1)+
   theme_minimal()+geom_text(label=names,hjust=0, vjust=0,size=2,check_overlap = T)+scale_fill_brewer(palette="Paired")
-
 ```
 
 Realmente los clusters no me están explicando tanto.
@@ -744,10 +782,64 @@ Realmente los clusters no me están explicando tanto.
 
 Vale, entonces cómo influye cada variable exactamente en el reg de tenencia?
 
-Si quito variables como secundarias, vacias, protegidas... el precio alquiler no toma mas relevancia. Parecen más relevantes esas características del mercado que el precio o características de la población.
+
+Primero probamos un modelo con todas las variables menos las relativas a la proporción de regímenes de tenencia. En el modelo 1, tenemos un R cuadrado de 0.3 y muchas variables no significativas o incluso con NA por una fuerte multicolinealidad.
+
+En el modelo 2 añadimos los regímenes de tenencia en 2011. En este caso el R cuadrdado pasa a ser 0.51. Este modelo intentaría explicar el cambio en la Propiedad en 2021 desde 2011 a partir de los datos de regímenes de tenencia en 2011 y el resto de variables independientes, sin dar información de los regímenes en 2021 para que no se autocorrelacione.
+
+Modelo 3, quitamos variables no significativas, 0.46 R cuadrado. Los coeficientes que me salen sono casi todos negativos, es difícil de interpretar.
 
 ```{r}
+# Preparar datos
+municipios <- read_xlsx("municipios.xlsx")
+propiedad <- read_xlsx("propiedad.xlsx")
 
+municipios <- municipios |> 
+    mutate(MUN_LITERAL = ifelse(grepl("\\d", MUN_LITERAL), paste(MUN_LITERAL, PROV_LITERAL), MUN_LITERAL))
+todopropiedad <- propiedad |> 
+  select(cusec, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun, PropiedadDifMun, AlquilerDifMun, OtroDifMun)
+
+municipios <- municipios |> 
+  select(-Propiedad21Mun, -Alquiler21Mun, -Otro21Mun, -Compra11Mun, -Herencia11Mun, -Alquiler11Mun, -Otro11Mun, -PropiedadDifMun, -AlquilerDifMun) |> 
+  left_join(todopropiedad, by = "cusec") 
+
+municipios <- municipios |> 
+  select(-OtroDifMun.x) |> 
+  mutate(OtroDifMun = OtroDifMun.y)
+
+numeric_data <- municipios %>%
+  ungroup() |> 
+  select_if(is.numeric) 
+
+
+# Modelo 1 - Todas las variables sin regímenes de tenencia
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, ipv2021Nueva, ipv2021Segunda, ipv2011General, ipv2011Nueva, ipv2011Segunda, RentaMedia2021, PorcentajeJoven2011, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2011, PorcentajeVacias2021, PorcentajeSecundarias2011, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola, PorcentajeEuropea, PorcentajeNoEuropea, PrecioHipoteca2021Prov, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2021, ParoJuvenil2011, PorcentajeProtegidas2011, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2)
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo)
+ 
+# Modelo 2 - Todas las variables con regímenes de tenencia 2011
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, ipv2021Nueva, ipv2021Segunda, ipv2011General, ipv2011Nueva, ipv2011Segunda, RentaMedia2021, PorcentajeJoven2011, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2011, PorcentajeVacias2021, PorcentajeSecundarias2011, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola, PorcentajeEuropea, PorcentajeNoEuropea, PrecioHipoteca2021Prov, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2021, ParoJuvenil2011, PorcentajeProtegidas2011, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun)
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo)
+
+# Modelo 3 - Variables significativas con regímenes de tenencia 2011
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021Segunda, ipv2011General, ipv2011Segunda, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PrecioHipoteca2021Prov, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2011, ProtegidaDif, Propiedad11Mun, Herencia11Mun, Alquiler11Mun)
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo)
+
+
+```
+
+Este modelo no incluyen información de los regímenes de tenencia en 2011. Los coeficientes parecen tener sentido, pero el R cuadrado es bajo.
+
+```{r}
+# Modelo 3 - Sólo significativas
 independientes <- numeric_data |> 
   select(PropiedadDifMun, RentaMedia2021, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeEspañola, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2)
 
@@ -758,9 +850,23 @@ summary(modelo)
 
 ```
 
+### Modelo precio alquiler
+
+```{r}
+
+# Modelo para explicar precio alquiler con 0.84 R2
+modelo <- lm(PrecioAlquilerM2 ~ ., data = numeric_data)
+
+summary(modelo)
+
+```
+
 ### Logit
 
-La accuracy es muy alta pero claro porque las clases están super desequilibradas, entonces con que acierte sólo 7 de los aumentos da un 91%.
+Si no equilibro las clases, un 96% es descenso y 32% aumento de propiedad. La accuracy es de 85%, lo cual es lógico porque las clases están desbalanceadas. Vemos que la especificidad es de 96%, es decir, predice con mucho acierto los descensos, pero la sensibilidad es de sólo 0.32, detecta mal los aumentos.
+
+Si se equilibran las clases con N=1000 la precisión baja a 72%, especificidad a 71% pero la sensibilidad aumenta al 73%.
+
 ```{r}
 
 # Preparar datos
@@ -770,9 +876,24 @@ propiedad <- read_xlsx("propiedad.xlsx")
 municipios <- municipios |> 
     mutate(MUN_LITERAL = ifelse(grepl("\\d", MUN_LITERAL), paste(MUN_LITERAL, PROV_LITERAL), MUN_LITERAL))
 
+numeric_data <- municipios %>%
+  ungroup() |> 
+  select_if(is.numeric) 
+
 numeric_data <- numeric_data %>%
   mutate(Propiedad = ifelse(PropiedadDifMun >= 0, 1, 0)) %>%
   select(Propiedad, RentaMedia2021, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeEspañola, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2) 
+
+# Equilibrar clases
+prop.table(table(numeric_data$Propiedad)) 
+
+library(ROSE)
+numeric_data <- ovun.sample(Propiedad~., 
+                    data = numeric_data, 
+                    method = "over", 
+                    N = 1000)$data
+
+table(numeric_data$Propiedad)
 # Modelo
 modelo <- glm(Propiedad ~ ., data = numeric_data, family = binomial(link = "logit"))
 
@@ -782,23 +903,17 @@ summary(modelo)
 prob_pred <- predict(modelo, type = "response")
 clases_pred <- ifelse(prob_pred > 0.5, 1, 0)
 
-table(Real = numeric_data$Propiedad, Predicho = clases_pred)
+confusion_matrix <-table(Real = numeric_data$Propiedad, Predicho = clases_pred)
+confusion_matrix
 
 # Accuracy
 sum(diag(confusion_matrix)) / sum(confusion_matrix)
 
+# Sensibilidad
+confusion_matrix[2, 2] / sum(confusion_matrix[2, ])
 
-```
-
-
-### Modelo precio alquiler
-
-```{r}
-
-# Modelo para explicar precio alquiler con 0.84 R2
-modelo <- lm(PrecioAlquilerM2 ~ ., data = numeric_data)
-
-summary(modelo)
+# Especificidad
+confusion_matrix[1, 1] / sum(confusion_matrix[1, ])
 
 ```
 
