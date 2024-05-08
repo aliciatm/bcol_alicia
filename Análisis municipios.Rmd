@@ -550,6 +550,99 @@ dif_otro_prov <- propiedad %>%
 
 ```
 
+## Mapa diferencia provincias
+
+```{r, fig.height=6, fig.width=12}
+
+library(mapSpain)
+  
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+  
+ccaa <- esp_get_ccaa() |> 
+  mutate(codauto = codauto)
+
+mapa <- propiedad |> 
+  select(CPRO, PropiedadDifProv) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+# Propiedad
+p1 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = PropiedadDifProv), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(PropiedadDifProv, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de propiedad por provincia 2021") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0)
+
+# Alquiler
+mapa <- propiedad |> 
+  select(CPRO, AlquilerDifProv) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p2 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = AlquilerDifProv), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(AlquilerDifProv, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de alquiler por provincia 2021") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0)
+
+
+# Otro
+mapa <- propiedad |> 
+  select(CPRO, OtroDifProv) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p3 <- ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = OtroDifProv), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(OtroDifProv, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  theme_void() +  
+  labs(title = "Porcentaje de otro por provincia 2021") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6)) + 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0)
+
+
+ggarrange(p1, p2, p3, ncol=2, nrow = 2)
+
+```
+
+
 ## PCA
 
 Qué tienen estos municipios en común? Qué distingue unos de los otros? Pues vamos a ver los componentes y clusters
@@ -598,6 +691,7 @@ ccaa = municipios$CCAA
 numeric_data <- municipios %>%
   ungroup() |> 
   select_if(is.numeric) 
+
 
 # Creating the components
 set.seed(123)
@@ -740,40 +834,205 @@ Tal vez poner mi variable binaria de Propiedad?
 ```{r}
 
 set.seed(123)
-fit <- kmeans(numeric_data, centers=6, nstart = 100)
+fit <- kmeans(numeric_data, centers=3, nstart = 100)
+fit
+
+numeric_data$cluster <- fit$cluster
+centers=fit$centers
+
+# Todo normal, no normalizo nada, pero al calcular los centers sí lo hago para poder interpretar el barplot
+scaled_centers <- scale(fit$centers)
+
+barplot(scaled_centers[1,], las=2, col="#097969")
+barplot(scaled_centers[2,], las=2, col="#097969")
+#-
+
+barplot(centers[1,], las=2, col="#097969")
+barplot(centers[2,], las=2, col="#097969")
+barplot(centers[3,], las=2, col="#097969")
+
+fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', pointsize=1)+
+  theme_minimal()+geom_text(label=names,hjust=0, vjust=0,size=2,check_overlap = T)+scale_fill_brewer(palette="Paired")
+
+
+```
+
+
+
+# Peso a varibale objetivo
+
+### Solo normalizar todo
+Si hago esto así, la varianza explicada es similar etc. me sale un clustlot un poco raro con municipios super outliers. Para ver si es más útil así tendría que analizarlo. 
+
+```{r}
+
+# normalizar
+numeric_data <- scale(numeric_data)
+numeric_data <- as.data.frame(numeric_data)
+
+pca = prcomp(numeric_data, scale=T)
+summary(pca)
+
+# Plot of the variability explained by components
+fviz_screeplot(pca, addlabels = TRUE)
+
+
+fit <- kmeans(numeric_data, centers = 3, nstart = 100)
 fit
 
 numeric_data$cluster <- fit$cluster
 
 centers=fit$centers
 
-scaled_centers <- scale(fit$centers)
+barplot(centers[1,], las=2, col="#097969")
+barplot(centers[2,], las=2, col="#097969")
+barplot(centers[3,], las=2, col="#097969")
 
-barplot(scaled_centers[1,], las=2, col="#097969")
-barplot(scaled_centers[2,], las=2, col="#097969")
-barplot(scaled_centers[5,], las=2, col="#097969")
 
 ```
 
-Probando cositas
-```{r}
-scaled_numeric_data <- scale(numeric_data)
 
-# Realizar el clustering con K-means en los datos estandarizados
-fit <- kmeans(scaled_numeric_data, centers = 6, nstart = 100)
+Normalizo y hago que la variable objetivo tenga más importancia. Sino, me salen medias super parecidas de cada variable y no es útil. Ahora sí me salen cosas interesantes.
+
+```{r}
+
+numeric_data <- scale(numeric_data)
+numeric_data <- as.data.frame(numeric_data)
+
+# Asignar la variable de importancia
+numeric_data$Importance <- numeric_data$PropiedadDifMun
+
+# Normalizar todas las variables, excluyendo la columna de la importancia
+normalized_numeric_data <- numeric_data
+normalized_numeric_data[, -ncol(normalized_numeric_data)] <- scale(normalized_numeric_data[, -ncol(normalized_numeric_data)])
+
+# Multiplicar cada variable por su peso de importancia
+weighted_normalized_numeric_data <- normalized_numeric_data
+
+weighted_normalized_numeric_data[, -ncol(weighted_normalized_numeric_data)] <- weighted_normalized_numeric_data[, -ncol(weighted_normalized_numeric_data)] * numeric_data$Importance
+
+
+```
+
+### PCA
+
+Los dos primeros componentes explican el 48.7%.
+
+```{r}
+
+pca = prcomp(numeric_data, scale=T)
+summary(pca)
+
+# Plot of the variability explained by components
+fviz_screeplot(pca, addlabels = TRUE)
+
+```
+
+*Componente 1*. 
+
+```{r}
+fviz_contrib(pca, choice = "var", axes = 1)
+
+# Plot adjustments
+n <- 10
+col_pos <- colorRampPalette(c("#CCE6CC", "#208909"))(n)
+col_neg <- colorRampPalette(c("#FFE6E6", "#B30000"))(n)
+coefs <- pca$rotation[,1]
+valor_max <- max(coefs)
+valor_min <- min(coefs)
+coefs_ajustados <- coefs - valor_min + 1
+colores <- ifelse(coefs >= 0, col_pos[ceiling((coefs_ajustados / (valor_max - valor_min + 1)) * n)], 
+                  col_neg[ceiling((abs(coefs_ajustados) / (valor_max - valor_min + 1)) * n)])
+
+# Plot
+barplot(coefs, las = 2, col = colores, cex.names = 0.8)
+
+#Ranking of municipalities of this component
+names[order(pca$x[,1], decreasing=T)][1:5]
+names[order(pca$x[,1])][1:5]
+
+```
+
+componente 2
+
+```{r}
+# Contribution of variables to component 1
+fviz_contrib(pca, choice = "var", axes = 2)
+
+# Plot adjustments
+coefs <- pca$rotation[,2]
+valor_max <- max(coefs)
+valor_min <- min(coefs)
+coefs_ajustados <- coefs - valor_min + 1
+colores <- ifelse(coefs >= 0, col_pos[ceiling((coefs_ajustados / (valor_max - valor_min + 1)) * n)], 
+                  col_neg[ceiling((abs(coefs_ajustados) / (valor_max - valor_min + 1)) * n)])
+
+# Plot
+barplot(coefs, las = 2, col = colores, cex.names = 0.8)
+
+#Ranking of municipalities of this component
+names[order(pca$x[,2], decreasing=T)][1:5]
+names[order(pca$x[,2])][1:5]
+
+```
+
+plot componentes
+
+```{r}
+p <-data.frame(z1 = pca$x[,1], z2 = pca$x[,2]) %>%
+  ggplot(aes(z1, z2, label = names, color = ccaa)) +
+  geom_point(size = 0) +
+  labs(title = "First two principal components (scores)", x = "PC1", y = "PC2") +  theme_bw() +   theme(legend.position = "bottom") +
+  geom_text(size = 3, hjust = 0.6, vjust = 0, check_overlap = T)
+
+p
+
+# Versión interactiva
+ggplotly(p)
+
+```
+
+###cLusters
+
+```{r}
+fviz_nbclust(scale(weighted_numeric_data), kmeans, method = 'wss', k.max = 20, nstart = 1000)
+
+fviz_nbclust(scale(weighted_numeric_data), kmeans, method = 'silhouette', k.max = 20, nstart = 1000)
+
+fviz_nbclust(scale(weighted_numeric_data), kmeans, method = 'gap_stat', k.max = 10, nstart = 100, nboot = 100)
+
+```
+
+```{r}
+
+# Realizar el clustering con los datos ponderados
+fit <- kmeans(numeric_data, centers = 3, nstart = 100)
 fit
 
+numeric_data$cluster <- fit$cluster
+
+scaled_centers <- scale(fit$centers)
+
+# Crear los gráficos de barras con las variables estandarizadas
+barplot(scaled_centers[1,], las=2, col="#097969")
+barplot(scaled_centers[2,], las=2, col="#097969")
+
+centers=fit$centers
+
+barplot(centers[1,], las=2, col="#097969")
+barplot(centers[2,], las=2, col="#097969")
+barplot(centers[3,], las=2, col="#097969")
+
 
 ```
-
 
 Clusplot
 
 ```{r, fig.height=6, fig.width=12}
 
-
 fviz_cluster(fit, data = numeric_data, geom = c("point"),ellipse.type = 'norm', pointsize=1)+
   theme_minimal()+geom_text(label=names,hjust=0, vjust=0,size=2,check_overlap = T)+scale_fill_brewer(palette="Paired")
+
 ```
 
 Realmente los clusters no me están explicando tanto.
@@ -850,12 +1109,35 @@ summary(modelo)
 
 ```
 
+Vamos a intentar hacer un modelo poniendo todas las variables de 'diferencia' si es posible. 
+
+Diferencia IPV? siempre es aumento (o no?)
+Buscar
+
+
+```{r}
+independientes <- numeric_data |> 
+  select(ipv2021General, ipv2021Nueva, ipv2021Segunda, ipv2011General, ipv2011Nueva, ipv2011Segunda, RentaMedia2021, PorcentajeJoven2011, PorcentajeVacias2011, PorcentajeSecundarias2011, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2021, PorcentajeProtegidas2011, PorcentajeProtegidas2021, PrecioAlquilerM2, Herencia11Mun, Alquiler11Mun, Otro11Mun)
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+
+summary(modelo)
+
+
+```
+
+
 ### Modelo precio alquiler
 
 ```{r}
 
-# Modelo para explicar precio alquiler con 0.84 R2
-modelo <- lm(PrecioAlquilerM2 ~ ., data = numeric_data)
+independientes <- numeric_data |> 
+  select(ipv2021General, ipv2021Nueva, ipv2021Segunda, ipv2011General, ipv2011Nueva, ipv2011Segunda, RentaMedia2021, PorcentajeJoven2011, PorcentajeVacias2011, PorcentajeSecundarias2011, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2021, PorcentajeProtegidas2011, PorcentajeProtegidas2021, PrecioAlquilerM2, Herencia11Mun, Alquiler11Mun, Otro11Mun)
+
+
+
+# Modelo para explicar precio alquiler con 0.83 R2
+modelo <- lm(PrecioAlquilerM2 ~ ., data = independientes)
 
 summary(modelo)
 

@@ -220,10 +220,14 @@ ipv <- read_xlsx("Índice precios vivienda/ipv.xlsx") |>
     ipv2021Segunda = `ipv2021Vivienda segunda mano`,
     ipv2011General = ipv2011General,
     ipv2011Nueva = `ipv2011Vivienda nueva`,
-    ipv2011Segunda = `ipv2011Vivienda segunda mano`) |>             mutate(CCAA = case_when(
+    ipv2011Segunda = `ipv2011Vivienda segunda mano`) |>
+  mutate(CCAA = case_when(
     CCAA == "Región de Murcia" ~ "Comunidad de Murcia",
     CCAA == "Principado de Asturias" ~ "Asturias",
-    TRUE ~ CCAA))
+    TRUE ~ CCAA),
+    ipvGeneralDif = ipv2021General - ipv2011General)
+
+
 
 
 municipios <- municipios |> 
@@ -514,10 +518,16 @@ vacias2011 <- viviendas2011 |>
   select(cusec, PorcentajeVacias2011) |> 
   distinct(cusec, .keep_all = T)
 
+# Juntar ambos años
+vacias <- vacias2011 |> 
+  left_join(vacias2021, by = "cusec")
+
+# Crear diferencia 
+vacias <- vacias |> 
+  mutate(VaciasDif = PorcentajeVacias2021-PorcentajeVacias2011)
+
 municipios <- municipios |> 
-  left_join(vacias2011, by = "cusec") |> 
-  distinct(cusec, .keep_all=T) |> 
-  left_join(vacias2021, by = "cusec") |> 
+  left_join(vacias, by = "cusec") |> 
   distinct(cusec, .keep_all=T)
 
 ```
@@ -570,6 +580,15 @@ secundarias2011 <- viviendas2011 |>
     mutate(PorcentajeSecundarias2011 = round((ViviendasSecundarias2011 / ViviendasTotales) * 100, 2)) |>
   select(cusec, PorcentajeSecundarias2011) |> 
   distinct(cusec, .keep_all = T)
+
+# Juntar ambos años
+secundarias <- secundarias2011 |> 
+  left_join(secundarias2021, by = "cusec")
+
+# Crear diferencia 
+secundarias <- secundarias |> 
+  mutate(SecundariasDif=PorcentajeSecundarias2021-PorcentajeSecundarias2011)
+
 
 municipios <- municipios |> 
   left_join(secundarias2011, by = "cusec") |> 
@@ -1136,7 +1155,28 @@ municipios <- municipios |>
 
 ```{r}
 
-nacionalidad <- microdatos2021 |> 
+#2011
+nacionalidad2011 <- microdatos2011 |> 
+  select(CPRO, CMUN, NACI) |> 
+   mutate(
+    CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
+    CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |>
+   mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
+    mutate(
+    NACIONALIDAD = case_when(
+      NACI == 108 ~ "Española",
+      NACI %in% c(102:199) ~ "Europea",
+      TRUE ~ "No europea")) |> 
+  group_by(cusec) |> 
+  mutate(PorcentajeEspañola2011 = round(mean(NACIONALIDAD == "Española") * 100, 2),
+         PorcentajeEuropea2011 = round(mean(NACIONALIDAD == "Europea") * 100, 2),
+         PorcentajeNoEuropea2011 = round(mean(NACIONALIDAD == "No europea") * 100, 2)) |> 
+  ungroup() |> 
+  distinct(cusec, .keep_all = T) |> 
+  select(cusec, PorcentajeEspañola2011, PorcentajeEuropea2011, PorcentajeNoEuropea2011)
+
+#2021
+nacionalidad2021 <- microdatos2021 |> 
    mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN)) |> 
     mutate(
     NACIONALIDAD = case_when(
@@ -1144,23 +1184,33 @@ nacionalidad <- microdatos2021 |>
       PNACIO %in% c(102:199) ~ "Europea",
       TRUE ~ "No europea")) |> 
   group_by(cusec) |> 
-  mutate(PorcentajeEspañola = round(mean(NACIONALIDAD == "Española") * 100, 2),
-         PorcentajeEuropea = round(mean(NACIONALIDAD == "Europea") * 100, 2),
-         PorcentajeNoEuropea = round(mean(NACIONALIDAD == "No europea") * 100, 2)) |> 
+  mutate(PorcentajeEspañola2021 = round(mean(NACIONALIDAD == "Española") * 100, 2),
+         PorcentajeEuropea2021 = round(mean(NACIONALIDAD == "Europea") * 100, 2),
+         PorcentajeNoEuropea2021 = round(mean(NACIONALIDAD == "No europea") * 100, 2)) |> 
   ungroup() |> 
   distinct(cusec, .keep_all = T) |> 
-  select(cusec, PorcentajeEspañola, PorcentajeEuropea, PorcentajeNoEuropea)
+  select(cusec, PorcentajeEspañola2021, PorcentajeEuropea2021, PorcentajeNoEuropea2021)
 
 # Agrupar municipios pequeños
-nacionalidad <- nacionalidad |> 
+nacionalidad2021 <- nacionalidad2021 |> 
   left_join(cusec_rural_2021, by = c("cusec" = "cusec_original")) |> 
   mutate(cusec = coalesce(cusec.y, cusec)) |> 
   select(-cusec.y) |> 
   group_by(cusec) |> # Group all small mun together by province 
-  summarise(PorcentajeEspañola = round(mean(PorcentajeEspañola), 2),
-            PorcentajeEuropea = round(mean(PorcentajeEuropea), 2),
-            PorcentajeNoEuropea = round(mean(PorcentajeNoEuropea), 2)) |> 
+  summarise(PorcentajeEspañola2021 = round(mean(PorcentajeEspañola2021), 2),
+            PorcentajeEuropea2021 = round(mean(PorcentajeEuropea2021), 2),
+            PorcentajeNoEuropea2021 = round(mean(PorcentajeNoEuropea2021), 2)) |> 
   ungroup() 
+
+# Juntar ambos años
+nacionalidad <- nacionalidad2011 |> 
+  left_join(nacionalidad2021, by = "cusec")
+
+# Crear diferencia 
+nacionalidad <- nacionalidad |> 
+ mutate(PorcentajeEspañolaDif=PorcentajeEspañola2021-PorcentajeEspañola2011,
+       PorcentajeEuropeaDif=PorcentajeEuropea2021-PorcentajeEuropea2011,
+       PorcentajeNoEuropeaDif=PorcentajeNoEuropea2021-PorcentajeNoEuropea2011)
 
 municipios <- municipios |> 
   left_join(nacionalidad, by = "cusec")
@@ -1385,10 +1435,6 @@ paro2021 <- paro2021 |>
     CCAA == "Rioja, La" ~ "La Rioja",
     TRUE ~ CCAA))
 
-# Juntar con municipios
-municipios <- municipios |> 
-  left_join(paro2021, by = "CCAA")
-
 # En 2011
 paro2011 <- read_xlsx("Paro juvenil/paroccaa2011.xlsx")
 
@@ -1410,10 +1456,15 @@ paro2011 <- paro2011 |>
     CCAA == "Rioja, La" ~ "La Rioja",
     TRUE ~ CCAA))
 
+paro <- paro2011 |> 
+  left_join(paro2021, by = "CCAA")
+
+paro <- paro |> 
+  mutate(ParoJuvenilDif = ParoJuvenil2021 - ParoJuvenil2011)
+
 # Juntar con municipios
 municipios <- municipios |> 
-  left_join(paro2011, by = "CCAA")
-
+  left_join(paro, by = "CCAA")
 
 ```
 
@@ -1552,6 +1603,10 @@ Imputo los valores perdidos de la variable PrecioAlquilerM2 usando el método pm
 
 ```{r}
 
+municipiosm <- municipios 
+municipios <- municipiosm
+municipiosr <- municipios
+
 set.seed(123)
 data_imputed <- data.frame(
   cusec = municipiosr$cusec,
@@ -1570,13 +1625,22 @@ data_imputed_filtrado <- data_imputed |>
 # Ver el resultado
 View(data_imputed_filtrado)
      
-# Juntar con municipios
-municipios <- municipios %>%
-  full_join(data_imputed_filtrado, by = "cusec") 
-  
-municipios<-municipios |> 
-  select(-PrecioAlquilerM2.y)
+municipios <- municipios |> 
+  mutate(
+    PrecioAlquilerM2= case_when(
+      cusec == 11991 ~ 8.6,
+      cusec == 30991 ~ 9.3,
+      cusec == 31991 ~ 8.6,
+      cusec == 31992 ~ 10.9,
+      cusec == 31993 ~ 8.6,
+      cusec == 31994 ~ 11.9,
+      cusec == 31201 ~ 8.6,
+      cusec == 31232 ~ 11.9,
+      TRUE ~ PrecioAlquilerM2))
 
+
+municipios <- municipios |> 
+  mutate(PorcentajeEuropeaDif = PorcentajeEuropeaaDif)
 ```
 
 ## Modelo de prueba
