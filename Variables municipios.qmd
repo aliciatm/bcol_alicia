@@ -591,10 +591,8 @@ secundarias <- secundarias |>
 
 
 municipios <- municipios |> 
-  left_join(secundarias2011, by = "cusec") |> 
-  distinct(cusec, .keep_all=T) |> 
-  left_join(secundarias2021, by = "cusec") |> 
-  distinct(cusec, .keep_all=T)
+  left_join(secundarias, by = "cusec") |> 
+  distinct(cusec, .keep_all=T) 
 
 ```
 

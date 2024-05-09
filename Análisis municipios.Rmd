@@ -17,6 +17,7 @@ library(haven)
 library(mice)
 library(factoextra)
 library(ggpubr)
+library(car)
 
 ```
 
@@ -1055,6 +1056,7 @@ propiedad <- read_xlsx("propiedad.xlsx")
 
 municipios <- municipios |> 
     mutate(MUN_LITERAL = ifelse(grepl("\\d", MUN_LITERAL), paste(MUN_LITERAL, PROV_LITERAL), MUN_LITERAL))
+
 todopropiedad <- propiedad |> 
   select(cusec, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun, PropiedadDifMun, AlquilerDifMun, OtroDifMun)
 
@@ -1065,6 +1067,9 @@ municipios <- municipios |>
 municipios <- municipios |> 
   select(-OtroDifMun.x) |> 
   mutate(OtroDifMun = OtroDifMun.y)
+
+municipios <- municipios |> 
+  mutate(SecundariasDif=PorcentajeSecundarias2021-PorcentajeSecundarias2011)
 
 numeric_data <- municipios %>%
   ungroup() |> 
@@ -1142,6 +1147,161 @@ modelo <- lm(PrecioAlquilerM2 ~ ., data = independientes)
 summary(modelo)
 
 ```
+
+# Modelo de Nuevo Tipo
+
+Bloques de variables.
+- Población
+  - PorcentajeJoven
+  - PorcentajeEspañola
+  - PorcentajeEuropea
+  - PorcentajeNoEuropea
+  - ParoJuvenil
+  - RentaMedia
+- Mercado de vivienda
+  - PorcentajeVacias
+  - PorcentajeSecundarias
+  - PorcentajeTurísticas
+  - PorcentajeProtegidas
+- Precio de vivienda
+  - ipv
+  - PrecioHipoteca
+  - PrecioAlquilerM2
+- Régimen de tenencia
+  - Herencia11Mun
+  
+Aumento de poblacion?
+
+```{r}
+
+# Modelo 1 - Sólo Diferencias
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo)
+
+# Modelo 2 - Diferencias y 2021
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun, ipv2021General, PorcentajeJoven2021, PorcentajeVacias2021, PorcentajeSecundarias2021, PorcentajeEspañola2021, PorcentajeEuropea2021, PorcentajeNoEuropea2021, PrecioHipoteca2021Prov, ParoJuvenil2021, PorcentajeProtegidas2021)
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo)
+
+# Modelo 3 - Diferencias y 2011
+
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun, ipv2011General, PorcentajeJoven2011, PorcentajeVacias2011, PorcentajeSecundarias2011, PorcentajeEspañola2011, PorcentajeEuropea2011, PorcentajeNoEuropea2011, PrecioHipoteca2011Prov, ParoJuvenil2011, PorcentajeProtegidas2011)
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo)
+
+
+
+```
+
+Qué variables dif no son significativas pero sí lo son en 21?
+
+Sólo diferencias R2 de 0.17, pierdo info.
+
+- ipvGeneralDif -> 2021 sí lo es
+- PorcentajeEspañolaDif -> 2021 no
+- PorcentajeEuropeaaDif -> 2021 no
+- PorcentajeNoEuropeaDif -> 2021 no
+- DifPrecioHipotecaProv -> si en este punto cambio ipv a 2021 y quito nacionalidad tiene 0.07 de p valor. 2021 es mucho menos significativo, así que no lo cambio finalmente.
+
+En este punto, de todas mis variables he perdido sólo las nacionalidades. Sólo me queda no significativa ahora PorcentajeJovenDif.
+
+- PorcentajeJovenDif -> 2021 no lo es ni 2011. Mantengo dif aunque no es significativa por poco.
+
+R2 es 017.
+
+Modelo 6.
+Si quito nacionalidades española y europea, no europea dif pasa a ser significativa. Entonces, PorcentajeJoven Dif sí lo es también, pero RentaMedia2021 no.
+
+Quito RentaMedia2021. 
+
+- PrecioAlquilerM2. No es significativa. La quito.
+- DifPrecioHipotecaProv. No es significativa. 2021 menos. la quito
+
+Ya todo sí. Pierdo nacionalidades española, europea, RentaMedia2021, PrecioAlquilerM2, DifPrecioHipotecaProv. Está claro que nacionalidad no europea se relaciona con estas cosas de precios y renta. Prefiero quedarme con el modelo 4 porque es más fácil de interpretar ese modelo que digamos explica lo mismo que no europea pero en 3 variables más comprensibles.
+
+```{r}
+# Modelo 4 - Dif, 2021 y significativas de éstas
+
+# original solo dif y las q me faltan en 2021
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+
+# sólo dif, las que me faltan en 2021 y dif no sgnificativas las pongo en 2021: Añado ipv2021 y quito nacionalidades
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+
+modelo4 <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo4)
+
+# Sólo dif, las que me faltan en 2021 y dif no sgnificativas las pongo en 2021. Añado ipv2021, quito nacionalidades menos noeuropea, quito renta, precioalquiler y difpreciohipoteca.
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, ParoJuvenilDif, ProtegidaDif, PorcentajeTurísticas2021, Herencia11Mun, PorcentajeNoEuropeaDif)
+
+modelo6 <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo6)
+
+```
+
+Qué variables dif no son significativas pero sí lo son en 11?
+
+Sólo diferencias R2 de 0.17, pierdo info.
+
+- ipvGeneralDif -> 2011 sí lo es
+- PorcentajeEspañolaDif -> 2011 no. Pero al ponerla, NoEuropeaDif sí lo es. o si quito dif.
+- PorcentajeEuropeaaDif -> 2011 no
+- PorcentajeNoEuropeaDif -> Al quitar las nacionalidades anteriores sí es significaativa.
+- DifPrecioHipotecaProv -> 2011 sí es.
+
+En este punto, de todas mis variables he perdido sólo las nacionalidades española y europea. Sólo me queda no significativa ahora RentaMedia2021 y PrecioAlquilerM2.
+
+- PrecioAlquilerM2. Lo quito. Renta sigue sin ser sidnigicativa y ipv pasa a dejar de serlo. ipvdif tampoco lo es.
+- RentaMedia2021. lo qito también. No es significativo ipv.
+
+Si quito ipv, todo significativo. 0.17 R2
+
+Pierdo info de nacionalidades española, europea, precioalquilerm2, rentamedia2021 e ipv.
+
+En este caso no es como en 2021, que si quito Europea éstas son significativas. No lo son, pasan a no serlo bastantes. Por lo que creo que el modelo 5 es el mejor de 2011.
+
+```{r}
+# Modelo 5 - Dif, 2011 y significativas de éstas
+
+# original solo dif y las q me faltan en 2021
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+
+modelo <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo)
+
+# sólo dif, las que me faltan en 2021 y significativas
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeNoEuropeaDif, PrecioHipoteca2011Prov, ParoJuvenilDif, ProtegidaDif, PorcentajeTurísticas2021, Herencia11Mun)
+
+modelo5 <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo5)
+```
+
+
+Creo que el mejor modelo es el 4. Utilizo en la mayor medida posible las diferencias, y cuando éstas no son significativas, utilizo los datos del 2021. Esto me permite decir: cuando en 2021 (la "actualidad") el IPV es más alto, eso puede contribuir en x cantidad a que sea menor la propiedad (por ejemplo, es una conjetura). Es decir, esta característica actual contribuye en tal forma a la variable dependiente. Creo que es más útil que decir 'cuando en 2011 esta variable es tal, los municipios ahora se ven favorecidos en tal...'. Además, el modelo 4 sólo pierde información de las nacionalidades, que son variables que quizá se explican peor que otras más concretas. Prefiero perder esas ante la multicolinealidad que otras.
+
+# Multicolinealidad y heterocedasticidad
+vif test y bp test
+
+ver multicolinealidad.
+
+```{r}
+
+vif(modelo4)
+
+```
+
 
 ### Logit
 
