@@ -18,6 +18,8 @@ library(mice)
 library(factoextra)
 library(ggpubr)
 library(car)
+library(lmtest)
+
 
 ```
 
@@ -1078,17 +1080,18 @@ numeric_data <- municipios %>%
 
 # Modelo 1 - Todas las variables sin regímenes de tenencia
 independientes <- numeric_data |> 
-  select(PropiedadDifMun, ipv2021General, ipv2021Nueva, ipv2021Segunda, ipv2011General, ipv2011Nueva, ipv2011Segunda, RentaMedia2021, PorcentajeJoven2011, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2011, PorcentajeVacias2021, PorcentajeSecundarias2011, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola, PorcentajeEuropea, PorcentajeNoEuropea, PrecioHipoteca2021Prov, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2021, ParoJuvenil2011, PorcentajeProtegidas2011, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2)
+  select(PropiedadDifMun, ipv2021General, ipv2021Nueva, ipv2021Segunda, ipv2011General, ipv2011Nueva, ipv2011Segunda, RentaMedia2021, PorcentajeJoven2011, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2011, PorcentajeVacias2021, PorcentajeSecundarias2011, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola2021, PorcentajeEuropea2021, PorcentajeNoEuropea2021, PrecioHipoteca2021Prov, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2021, ParoJuvenil2011, PorcentajeProtegidas2011, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2)
 
 modelo <- lm(PropiedadDifMun ~ ., data = independientes)
 summary(modelo)
  
 # Modelo 2 - Todas las variables con regímenes de tenencia 2011
 independientes <- numeric_data |> 
-  select(PropiedadDifMun, ipv2021General, ipv2021Nueva, ipv2021Segunda, ipv2011General, ipv2011Nueva, ipv2011Segunda, RentaMedia2021, PorcentajeJoven2011, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2011, PorcentajeVacias2021, PorcentajeSecundarias2011, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola, PorcentajeEuropea, PorcentajeNoEuropea, PrecioHipoteca2021Prov, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2021, ParoJuvenil2011, PorcentajeProtegidas2011, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun)
+  select(PropiedadDifMun, ipv2021General, ipv2021Nueva, ipv2021Segunda, ipv2011General, ipv2011Nueva, ipv2011Segunda, RentaMedia2021, PorcentajeJoven2011, PorcentajeJoven2021, PorcentajeJovenDif, PorcentajeVacias2011, PorcentajeVacias2021, PorcentajeSecundarias2011, PorcentajeSecundarias2021, PorcentajeTurísticas2021, PorcentajeEspañola2021, PorcentajeEuropea2021, PorcentajeNoEuropea2021, PrecioHipoteca2021Prov, PrecioHipoteca2011Prov, DifPrecioHipotecaProv, ParoJuvenil2021, ParoJuvenil2011, PorcentajeProtegidas2011, PorcentajeProtegidas2021, ProtegidaDif, PrecioAlquilerM2, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun)
 
 modelo <- lm(PropiedadDifMun ~ ., data = independientes)
 summary(modelo)
+
 
 # Modelo 3 - Variables significativas con regímenes de tenencia 2011
 independientes <- numeric_data |> 
@@ -1292,9 +1295,8 @@ summary(modelo5)
 Creo que el mejor modelo es el 4. Utilizo en la mayor medida posible las diferencias, y cuando éstas no son significativas, utilizo los datos del 2021. Esto me permite decir: cuando en 2021 (la "actualidad") el IPV es más alto, eso puede contribuir en x cantidad a que sea menor la propiedad (por ejemplo, es una conjetura). Es decir, esta característica actual contribuye en tal forma a la variable dependiente. Creo que es más útil que decir 'cuando en 2011 esta variable es tal, los municipios ahora se ven favorecidos en tal...'. Además, el modelo 4 sólo pierde información de las nacionalidades, que son variables que quizá se explican peor que otras más concretas. Prefiero perder esas ante la multicolinealidad que otras.
 
 # Multicolinealidad y heterocedasticidad
-vif test y bp test
 
-ver multicolinealidad.
+En el modelo 4 los valores de todas las variables son menores a 5, descartando la existencia de una multicolinealidad fuerte. Tiene sentido porque ya hemos quitado otras variables que no eran significativas, precisamente, por multicolinealidad seguramente. Sólo ipv2021General y PrecioAlquilerM2 presentan un valor más alto, ambas se refieren al precio de la vivienda. 
 
 ```{r}
 
@@ -1302,6 +1304,242 @@ vif(modelo4)
 
 ```
 
+
+### Heterocedasticidad
+
+Dado que los resultados del bp test da un p valor muy bajo, nos confirma que existe heterocedasticidad. En el gráfico de residuos vemos que los puntos se reparten alrededor de la línea del centro del eje y, 0, y tiene una forma más bien simétrica: hay más o menos los mismos puntos tanto debajo como encima de la línea. Con respecto al eje X, sí se observa que hay mayor variabilidad a la derecha, pareciendo ser valores atípicos. Estos puntos parecen corresponderse con los casos en los que aumenta la propiedad. Como son pocos casos el modelo no los predice tan bien y se observan un poco como outliers. A pesar de esto, no vemos formas muy raras o desajustes muy grandes, por lo que parece que más o menos se ajustan bien los residuos, a pesar de la existencia de heterocedasaticidad. O sea, no vemos cosas muy raras, sino la heterocedasticidad esperable por relaciones no lineales y la cuestión de que hay peor ajuste con los casos donde sí ha aumentado la propiedad.
+
+Con respecto al eje Y, sí vemos que hay cierta tendencia a asignar un valor predicho más bajo del real. De nuevo, porque hay muchos menos casos de cambio negativo que positivo. Pero si pruebo un modelo con solo las filas negativas es peor.
+```{r}
+#bp test
+bptest(modelo4)
+
+#residuos estandarizados
+residuos_estandarizados <- rstandard(modelo4)  
+valores_ajustados <- fitted(modelo4)         
+
+plot(valores_ajustados, residuos_estandarizados,
+     xlab = "Valores Ajustados", ylab = "Residuos Estandarizados",
+     main = "Gráfico de Residuos Estándar vs. Valores Ajustados")
+abline(h = 0, col = "red", lty = 2)         
+
+```
+
+Probando a normalizar las variables, me sale la misma heterocedasticidad. Probablemente se debe simplemente a que hay relaciones no lineales entre algunas variables independientes y la dependiente.
+
+```{r}
+
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+
+library(caret)
+
+# Selecciona todas las columnas de tu base de datos 'independientes'
+columnas_numericas <- sapply(independientes, is.numeric)
+
+# Normaliza todas las columnas utilizando el método Min-Max
+proceso_normalizacion <- preProcess(independientes[, columnas_numericas], method = c("range"))
+independientes_normalizados <- predict(proceso_normalizacion, independientes[, columnas_numericas])
+
+
+modelo4 <- lm(PropiedadDifMun ~ ., data = independientes_normalizados)
+summary(modelo4)
+
+
+residuos_estandarizados <- rstandard(modelo4)  
+valores_ajustados <- fitted(modelo4)         
+
+plot(valores_ajustados, residuos_estandarizados,
+     xlab = "Valores Ajustados", ylab = "Residuos Estandarizados",
+     main = "Gráfico de Residuos Estándar vs. Valores Ajustados")
+abline(h = 0, col = "red", lty = 2)         
+
+
+
+```
+
+### Normalidad
+
+El test de shapiro-wilk da un valor menor a 0.05, lo que nos dice que los datos no siguen una distribución normal.
+
+Sin embargo, en el QQ plot vemos que los datos se ajustan mayoritariamente de forma perfecta a la línea, pero en el principio y el final se desvían de forma simétrica: al principio los valores que se separan de la línea van hacia abajo, y al final van hacia arriba. Parece seguir una distribución normal o 'light tailed'. Esto se relaciona con tener menos valores extremos que una distribución normal.
+
+La desviación estándar de la variable PropiedadDifMun es de 1.32.
+
+```{r}
+#qq plot
+residuos <- resid(modelo4)
+
+qqnorm(residuos)
+qqline(residuos)
+shapiro.test(residuos)
+
+  
+```
+
+
+### Transformando variables
+
+Si pruebo el grafico de residuos en un modelo que solo usa el ipv, se ven lineas verticales rectas, porque son datos agrupados por ccaa.
+
+Si pongo un modelo de solo las filas positivas el r cuadrado aumenta a 0.36 pero se ve heterocedasticidad. Simplemente un modelo de 53 observaciones es poco fiable.
+
+```{r}
+#modelo original
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+
+#transformación
+independientes <- subset(independientes, PropiedadDifMun > 0)
+
+modelo4b <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo4b)
+
+# heterocedasticidad
+bptest(modelo4b)
+
+residuos_estandarizados <- rstandard(modelo4b)  
+valores_ajustados <- fitted(modelo4b)         
+plot(valores_ajustados, residuos_estandarizados,
+     xlab = "Valores Ajustados", ylab = "Residuos Estandarizados",
+     main = "Gráfico de Residuos Estándar vs. Valores Ajustados")
+abline(h = 0, col = "red", lty = 2)         
+
+
+```
+
+si hago log de propiedad. pues no se, no lo se interpretar bien, no tiene sentido cambiar la variable dependiente creo yo
+```{r}
+#modelo original
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+
+#transformación
+
+independientes <- independientes |> 
+  mutate(PropiedadDifMun = log(PropiedadDifMun))
+
+modelo4b <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo4b)
+
+# heterocedasticidad
+bptest(modelo4b)
+
+residuos_estandarizados <- rstandard(modelo4b)  
+valores_ajustados <- fitted(modelo4b)         
+plot(valores_ajustados, residuos_estandarizados,
+     xlab = "Valores Ajustados", ylab = "Residuos Estandarizados",
+     main = "Gráfico de Residuos Estándar vs. Valores Ajustados")
+abline(h = 0, col = "red", lty = 2)  
+```
+
+cambiar totras muchas variables
+
+- PrecioAlquilerM2^2. Lo elevo al cuadrado. Es significativa y además me explica bastante: un aumento en el precio del alquiler tiende a mostrar una pérdida de propiedad, pero un GRAN aumento en el mismo muestra un aumento. Es lo que pasa en Pozuelos, Alcobendas... Distinguiendo de nuevo estos dos grupos donde ha aumentado, los pueblos pequeños donde es barato y hay muchas viviendas y los pueblos pijos.
+- RentaMedia2021^2. Es lo mismo: cuando aumenta mucho la renta, aumenta la propiedad
+- DifPrecioHipotecaProv2. Deja de ser significativa la original. Similar a lo otro.
+
+Los outliers me molestan bastante y me quitan precisión del modelo. Por ejemplo en el caso de municipios con mucha más herencia de lo normal en 2011. Debería quitar outliers?? es que creo que me interesa explicar esos casos.
+
+- PorcentajeTurísticas2021log. el log parece expicar bastante más, pero la original deja de ser significativa. La puedo quitar. Para hacer el log necesito cambiar un municipio con 0% de viviendas turísticas y lo cambio a 0.01%, porque sino no se computa correctamente el logaritmo.
+
+
+```{r}
+#modelo original
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+
+#transformación
+
+independientes <- independientes |> 
+    mutate(PorcentajeTurísticas2021 = ifelse(PorcentajeTurísticas2021 == 0, 0.01, PorcentajeTurísticas2021)) |> 
+
+  mutate(PrecioAlquilerM22=PrecioAlquilerM2^2,
+         RentaMedia2021_2 = RentaMedia2021^2,
+         PorcentajeTurísticas2021log = log(PorcentajeTurísticas2021)) |> 
+  select(-PorcentajeTurísticas2021)
+
+modelo4b <- lm(PropiedadDifMun ~ ., data = independientes)
+summary(modelo4b)
+
+# heterocedasticidad
+bptest(modelo4b)
+
+residuos_estandarizados <- rstandard(modelo4b)  
+valores_ajustados <- fitted(modelo4b)         
+plot(valores_ajustados, residuos_estandarizados,
+     xlab = "Valores Ajustados", ylab = "Residuos Estandarizados",
+     main = "Gráfico de Residuos Estándar vs. Valores Ajustados")
+abline(h = 0, col = "red", lty = 2)  
+
+
+
+```
+
+
+ver distribucion variables
+```{r}
+
+# Selecciona las variables independientes
+variables_independientes <- c("ipv2021General", "PorcentajeJovenDif", "VaciasDif", "SecundariasDif",
+                              "DifPrecioHipotecaProv", "ParoJuvenilDif", "ProtegidaDif", "RentaMedia2021",
+                              "PorcentajeTurísticas2021", "PrecioAlquilerM2", "Herencia11Mun")
+
+# Configura la disposición de los gráficos
+par(mfrow = c(4, 3))  # Divide el área de trazado en una matriz de 4x3
+
+# Crea histogramas para cada variable
+for (variable in variables_independientes) {
+  hist(independientes[[variable]], main = paste("Histograma de", variable),
+       xlab = variable, col = "skyblue", border = "white")
+}
+
+
+
+```
+
+relacion entre dependientes e independientes
+
+```{r}
+generar_grafico <- function(variable) {
+  # Calcula la versión al cuadrado de la variable
+  independientes[[paste0(variable, "2")]] <- independientes[[variable]]^2
+
+  # Ajusta un modelo lineal con ambas variables
+  modelo <- lm(PropiedadDifMun ~ ., data = independientes[, c("PropiedadDifMun", variable, paste0(variable, "2"))])
+
+  # Genera un rango de valores para la variable
+  rango_variable <- seq(min(independientes[[variable]]), max(independientes[[variable]]), length.out = 100)
+
+  # Calcula las predicciones del modelo para el rango de valores
+  newdata <- independientes[1:100, ]  # Crea un nuevo data.frame con las primeras 100 filas de 'independientes'
+  newdata[[variable]] <- rango_variable  # Reemplaza la columna de la variable con 'rango_variable'
+  newdata[[paste0(variable, "2")]] <- rango_variable^2  # Añade la columna de la variable al cuadrado
+  predicciones <- predict(modelo, newdata = newdata)
+
+  # Grafica los datos de dispersión y la línea de la relación
+  plot(independientes[[variable]], independientes$PropiedadDifMun, 
+       xlab = variable, ylab = "PropiedadDifMun", main = paste("Relación entre", variable, "y Propiedad"),
+       col = "blue", pch = 16)
+  lines(rango_variable, predicciones, col = "red", lwd = 2)
+  legend("topright", legend = c("Datos", "Línea de Regresión"), col = c("blue", "red"), pch = c(16, NA), lwd = c(NA, 2))
+}
+
+# Ahora puedes llamar a la función para cada variable en tu lista
+variables_independientes <- c("ipv2021General", "PorcentajeJovenDif", "VaciasDif", "SecundariasDif",
+                              "DifPrecioHipotecaProv", "ParoJuvenilDif", "ProtegidaDif", "RentaMedia2021",
+                              "PorcentajeTurísticas2021", "PrecioAlquilerM2", "Herencia11Mun")
+
+for (variable in variables_independientes) {
+  generar_grafico(variable)
+}
+
+
+```
+
+Probar a ver estas relaciones antes de quedarme solo con las significativas
+
+cuando teng aun modelo alternativo compararlo con f test al modelo4 original.
 
 ### Logit
 
