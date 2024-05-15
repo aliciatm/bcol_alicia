@@ -1300,8 +1300,7 @@ En el modelo 4 los valores de todas las variables son menores a 5, descartando l
 
 ```{r}
 
-vif(modelo4)
-
+vif(modelo4b)
 ```
 
 
@@ -1385,6 +1384,8 @@ Si pruebo el grafico de residuos en un modelo que solo usa el ipv, se ven lineas
 Si pongo un modelo de solo las filas positivas el r cuadrado aumenta a 0.36 pero se ve heterocedasticidad. Simplemente un modelo de 53 observaciones es poco fiable.
 
 ```{r}
+
+
 #modelo original
 independientes <- numeric_data |> 
   select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
@@ -1441,23 +1442,30 @@ cambiar totras muchas variables
 
 Los outliers me molestan bastante y me quitan precisión del modelo. Por ejemplo en el caso de municipios con mucha más herencia de lo normal en 2011. Debería quitar outliers?? es que creo que me interesa explicar esos casos.
 
-- PorcentajeTurísticas2021log. el log parece expicar bastante más, pero la original deja de ser significativa. La puedo quitar. Para hacer el log necesito cambiar un municipio con 0% de viviendas turísticas y lo cambio a 0.01%, porque sino no se computa correctamente el logaritmo.
+- PorcentajeTurísticas2021log. el log parece expicar bastante más, pero la original deja de ser significativa. La puedo quitar. Para hacer el log necesito cambiar un municipio con 0% de viviendas turísticas y lo cambio a 0.01%, porque sino no se computa correctamente el logaritmo. Cuando el porcentaje pasa de 0 a un poco, el aumento de propiedad es enorme; cuando pasa de bastante a mucha el aumento es mucho menos notable. En cualquier caso me sale que a más viviendas turísticas más aumento de propiedad.
 
+- DifPrecioHipotecaProv2. Es significativa, la original es casi significativa. Básicamente mismo patrón, cuando aumenta el precio de la hipoteca disminuye probabilidad de propiedad, pero cuando aumenta mucho aumenta.
+
+- ipv2021General2. No lo meto porque se quedan ambas no significativas por poco, si quito la original deja de ser singificativa la elevada a 2.
+
+- Herencia11Munsqrt. Ambas significativas (ya porcentajejoven ha dejado de serlo totalmente). Ahora cuando elevo al cuadrado, cuando aumenta mucho la herencia, la propiedad disminye. pero cuando aumenta si mas, aumenta. He probado raíz cuadrada porque es la forma que toma según el gráfico pero me da menos r cuadrado y es más difícil de interpretar. tengo que ver ejemplos para entender esto mejor.
+
+parece que estoy reduciendo la heterocedasticidad al arreglar las relaciones no lineales. pero aumento muchísimo la multicolinealidad... tengo que repasar eso, o no usar la mismas variables dos vece que digamos, quedarme solo con la que de más info... pero me da rabia porque es que tener ambas me da información.
 
 ```{r}
 #modelo original
 independientes <- numeric_data |> 
-  select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun)
+  select(PropiedadDifMun, ipv2021General, PorcentajeJovenDif, VaciasDif, SecundariasDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun) |> 
 
 #transformación
 
-independientes <- independientes |> 
-    mutate(PorcentajeTurísticas2021 = ifelse(PorcentajeTurísticas2021 == 0, 0.01, PorcentajeTurísticas2021)) |> 
-
   mutate(PrecioAlquilerM22=PrecioAlquilerM2^2,
          RentaMedia2021_2 = RentaMedia2021^2,
-         PorcentajeTurísticas2021log = log(PorcentajeTurísticas2021)) |> 
+         PorcentajeTurísticas2021log = log(PorcentajeTurísticas2021 +1),
+         DifPrecioHipotecaProv2 = DifPrecioHipotecaProv^2,
+         Herencia11Mun2 = (Herencia11Mun)^2)|> 
   select(-PorcentajeTurísticas2021)
+
 
 modelo4b <- lm(PropiedadDifMun ~ ., data = independientes)
 summary(modelo4b)
@@ -1473,8 +1481,181 @@ plot(valores_ajustados, residuos_estandarizados,
 abline(h = 0, col = "red", lty = 2)  
 
 
+step_model <- MASS::stepAIC(modelo4b, direction = "both")
+summary(step_model)
+
+
 
 ```
+
+Este modelo es el que he ido construyendo yo. Tnego 0.30 de r cuadrado y es útil porque entiendo cada una de las cosas que he ido metiendo. Me faltaría transofmrar más vairbales (puedo seguir las sugerencias de chat), y con el step model acabo quitando variables que han dejado de ser significativas por el camino. Esto está bien, pero debería analizar qué información pierdo y si me interesa dejarlo así. Por otra parte, normalizo los datos para evitar enorme multicolinealidad, que creo que puedo explicarlo bien igualmente.
+
+### Step model
+
+En resumen, utilizo las transofmraciones que me propone chat a partir de los gráficos de ahí abajo y luego utilizo un step model para quitarme no significativas. Me aumenta que flipas el r cuadrado, no tengo ni multicolinealidad ni heterocedasticidad. Pero debo pensar si me interesan las variables que salen, qué información pierdo, qué cambiar etc. Revisando mis bloques de variables, ver si algún boque se queda huérfano o tal.
+
+Bloques de variables.
+- Población
+  - PorcentajeJoven
+  - PorcentajeEspañola
+  - PorcentajeEuropea
+  - PorcentajeNoEuropea
+  - ParoJuvenil
+  - RentaMedia
+- Mercado de vivienda
+  - PorcentajeVacias
+  - PorcentajeSecundarias
+  - PorcentajeTurísticas
+  - PorcentajeProtegidas
+- Precio de vivienda
+  - ipv
+  - PrecioHipoteca
+  - PrecioAlquilerM2
+- Régimen de tenencia
+  - Herencia11Mun
+
+TODO segun chat
+
+Si no normalizo me da un r cuadrado mucho más bajo y además me da infinita multicolinealidad. He de normalizar, aunque esto me genera problemas con algunas transfomraciones al ser números negativos.
+
+- RentaMedia2021_exp. Me dice que cuando aumenta la renta, disminuye la propiedad, pero esta tendencia conforme más aumenta la renta más se desacelera. Se complementa con la relación cuadrática.
+```{r}
+# Aplicar transformaciones basadas en observaciones de los gráficos
+# Aquí debes elegir las transformaciones basadas en los gráficos generados
+
+municipios <- read_xlsx("municipios.xlsx")
+propiedad <- read_xlsx("propiedad.xlsx")
+
+# arregñar datos de reg tenen
+
+municipios <- municipios |> 
+    mutate(MUN_LITERAL = ifelse(grepl("\\d", MUN_LITERAL), paste(MUN_LITERAL, PROV_LITERAL), MUN_LITERAL))
+
+todopropiedad <- propiedad |> 
+  select(cusec, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun, PropiedadDifMun, AlquilerDifMun, OtroDifMun)
+
+municipios <- municipios |> 
+  select(-Propiedad21Mun, -Alquiler21Mun, -Otro21Mun, -Compra11Mun, -Herencia11Mun, -Alquiler11Mun, -Otro11Mun, -PropiedadDifMun, -AlquilerDifMun) |> 
+  left_join(todopropiedad, by = "cusec") 
+
+municipios <- municipios |> 
+  select(-OtroDifMun.x) |> 
+  mutate(OtroDifMun = OtroDifMun.y)
+
+municipios <- municipios |> 
+  mutate(SecundariasDif=PorcentajeSecundarias2021-PorcentajeSecundarias2011)
+
+numeric_data <- municipios %>%
+  ungroup() |> 
+  select_if(is.numeric) 
+
+# normalizar
+numeric_data <- scale(numeric_data)
+numeric_data <- as.data.frame(numeric_data)
+
+#seleccionar variables
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun) |> 
+
+  # Ejemplo de transformaciones:
+    mutate(PrecioAlquilerM22=PrecioAlquilerM2^2,
+         RentaMedia2021_2 = RentaMedia2021^2,
+         PorcentajeTurísleticas2021log = log(PorcentajeTurísticas2021 +1),
+         DifPrecioHipotecaProv2 = DifPrecioHipotecaProv^2,
+         Herencia11Mun2 = (Herencia11Mun)^2,
+           VaciasDif2 = VaciasDif^2,
+           RentaMedia2021_exp = exp(RentaMedia2021),
+         PorcentajeEspañolaDif2 = PorcentajeEspañolaDif^2,
+        PorcentajeEuropeaDif2 = PorcentajeEuropeaaDif^2,
+         PorcentajeNoEuropeaDif2 = PorcentajeNoEuropeaDif^2,
+    SecundariasDif2 = (SecundariasDif)^2)
+
+# Eliminar filas con valores NA
+independientes <- na.omit(independientes)
+
+# Ajustar el modelo inicial con todas las variables (transformadas y originales)
+modelo_inicial <- lm(PropiedadDifMun ~ ., data = independientes)
+
+summary(modelo_inicial)
+
+# Usar stepAIC para seleccionar el mejor modelo
+modelo_final <- MASS::stepAIC(modelo_inicial, direction = "both")
+
+# Resumen del modelo final
+summary(modelo_final)
+
+
+bptest(modelo_final)
+
+residuos_estandarizados <- rstandard(modelo_final)  
+valores_ajustados <- fitted(modelo_final)         
+plot(valores_ajustados, residuos_estandarizados,
+     xlab = "Valores Ajustados", ylab = "Residuos Estandarizados",
+     main = "Gráfico de Residuos Estándar vs. Valores Ajustados")
+abline(h = 0, col = "red", lty = 2)  
+
+vif(modelo_final)
+```
+El siguiente paso es literalmente ver qué info 'pierdo' en este modelo y cambiar algunas variabesl q me interesen más que otras. Comprobando que no tengo mucha heterocedasticidad ni multicolinealidad
+
+
+### Gráficos chat
+```{r, fig.height=6, fig.width=12}
+# Cargar las librerías necesarias
+library(ggplot2)
+library(dplyr)
+library(MASS)
+
+# Obtener los nombres de las variables independientes (todas excepto la dependiente)
+variables_independientes <- setdiff(names(independientes), "PropiedadDifMun")
+
+# Función para generar gráficos y evaluar transformaciones
+generar_grafico <- function(variable) {
+  # Crear transformaciones
+  independientes[[paste0(variable, "2")]] <- independientes[[variable]]^2
+  independientes[[paste0(variable, "_sqrt")]] <- sqrt(independientes[[variable]])
+  independientes[[paste0(variable, "_log")]] <- log(independientes[[variable]] + 1)  # +1 para evitar log(0)
+  
+  # Modelos lineales
+  modelo_original <- lm(PropiedadDifMun ~ ., data = independientes[, c("PropiedadDifMun", variable)])
+  modelo_cuadrado <- lm(PropiedadDifMun ~ ., data = independientes[, c("PropiedadDifMun", variable, paste0(variable, "2"))])
+  modelo_sqrt <- lm(PropiedadDifMun ~ ., data = independientes[, c("PropiedadDifMun", variable, paste0(variable, "_sqrt"))])
+  modelo_log <- lm(PropiedadDifMun ~ ., data = independientes[, c("PropiedadDifMun", variable, paste0(variable, "_log"))])
+
+  # Generar rango de valores
+  rango_variable <- seq(min(independientes[[variable]], na.rm = TRUE), max(independientes[[variable]], na.rm = TRUE), length.out = 100)
+  newdata <- data.frame(variable = rango_variable)
+  colnames(newdata) <- variable
+  newdata[[paste0(variable, "2")]] <- rango_variable^2
+  newdata[[paste0(variable, "_sqrt")]] <- sqrt(rango_variable)
+  newdata[[paste0(variable, "_log")]] <- log(rango_variable + 1)
+  
+  # Predicciones
+  pred_original <- predict(modelo_original, newdata = newdata)
+  pred_cuadrado <- predict(modelo_cuadrado, newdata = newdata)
+  pred_sqrt <- predict(modelo_sqrt, newdata = newdata)
+  pred_log <- predict(modelo_log, newdata = newdata)
+
+  # Graficar
+  plot(independientes[[variable]], independientes$PropiedadDifMun, 
+       xlab = variable, ylab = "PropiedadDifMun", main = paste("Relación entre", variable, "y PropiedadDifMun"),
+       col = "blue", pch = 16)
+  lines(rango_variable, pred_original, col = "red", lwd = 2)
+  lines(rango_variable, pred_cuadrado, col = "green", lwd = 2, lty = 2)
+  lines(rango_variable, pred_sqrt, col = "purple", lwd = 2, lty = 3)
+  lines(rango_variable, pred_log, col = "orange", lwd = 2, lty = 4)
+  legend("topright", legend = c("Datos", "Original", "Cuadrado", "Raíz Cuadrada", "Logaritmo"),
+         col = c("blue", "red", "green", "purple", "orange"), pch = c(16, NA, NA, NA, NA), 
+         lwd = c(NA, 2, 2, 2, 2), lty = c(NA, 1, 2, 3, 4))
+}
+
+# Generar gráficos para cada variable independiente
+for (variable in variables_independientes) {
+  generar_grafico(variable)
+}
+
+```
+
 
 
 ver distribucion variables
@@ -1536,6 +1717,7 @@ for (variable in variables_independientes) {
 
 
 ```
+He de meter alquiler11mun? por queno? aclarar los regimenes de tenencia.
 
 Probar a ver estas relaciones antes de quedarme solo con las significativas
 
