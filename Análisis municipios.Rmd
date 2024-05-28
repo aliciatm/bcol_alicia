@@ -1300,7 +1300,7 @@ En el modelo 4 los valores de todas las variables son menores a 5, descartando l
 
 ```{r}
 
-vif(modelo4b)
+vif(modelo4)
 ```
 
 
@@ -1570,8 +1570,6 @@ independientes <- numeric_data |>
          PorcentajeNoEuropeaDif2 = PorcentajeNoEuropeaDif^2,
     SecundariasDif2 = (SecundariasDif)^2)
 
-# Eliminar filas con valores NA
-independientes <- na.omit(independientes)
 
 # Ajustar el modelo inicial con todas las variables (transformadas y originales)
 modelo_inicial <- lm(PropiedadDifMun ~ ., data = independientes)
@@ -1595,8 +1593,245 @@ plot(valores_ajustados, residuos_estandarizados,
 abline(h = 0, col = "red", lty = 2)  
 
 vif(modelo_final)
+
 ```
 El siguiente paso es literalmente ver qué info 'pierdo' en este modelo y cambiar algunas variabesl q me interesen más que otras. Comprobando que no tengo mucha heterocedasticidad ni multicolinealidad
+
+Bloques de variables.
+- Población
+  - PorcentajeJoven 
+  - PorcentajeEspañola. Está elevada a 2.
+  - PorcentajeEuropea. Elevada a 2.
+  - PorcentajeNoEuropea. X
+  - ParoJuvenil. 
+  - RentaMedia. Está elevada a 2.
+- Mercado de vivienda
+  - PorcentajeVacias. 
+  - PorcentajeSecundarias.
+  - PorcentajeTurísticas.
+  - PorcentajeProtegidas. 
+- Precio de vivienda
+  - ipv X
+  - PrecioHipoteca. Original y elevada a 2.
+  - PrecioAlquilerM2. Original y elevado a 2.
+- Régimen de tenencia.
+  - Herencia11Mun. Ambos.
+
+Mi criterio es "lo que decida el step model", par no meter transformadas y originales y meter na transformada similar a la original?
+
+Puedo perder un poco de explicación por consistencia, pero hay que tener en cuenta que cambiar una cosa me cambia todo el modelo. Arreglar:
+
+- Las de nacionalidad que salen explicadas trasnformadas y no
+- Las de PrecioAlquilerM2 y Herencia11Mun porque salen ambas. 
+
+Parece que las trasnformadas son mucho más explciativas. No quito las de nacionaidad porquesimplemente algunas tienen relacion lineal y otras cuadrática.
+
+He de meter cesión 2011 por ejemplo?
+
+
+### Voy a quitar las que no me molan y repetir
+
+Tengo heterocedasticidad pero no parece muy exagerada o con patrones claros, por lo que no me preocupo demasiado. Por otra parte no hay multicolineadlidad a pesar de meter las variables repetidas.
+
+
+(Intercept). -0.266212. El intercepto indica el valor promedio de PropiedadDifMun cuando todas las variables independientes son cero.
+
+- PorcentajeJovenDif. 0.076670. Un aumento en el porcentaje de jóvenes se asocia con un aumento del 0.076670 en PropiedadDifMun.
+
+- VaciasDif. 0.128515. Un aumento en el porcentaje de viviendas vacías se asocia con un aumento del 0.128515 en PropiedadDifMun.
+
+- SecundariasDif. 0.112695. Un aumento en el porcentaje de viviendas secundarias se asocia con un aumento del 0.112695 en PropiedadDifMun.
+
+- PorcentajeNoEuropeaDif. -0.314526. Un aumento en el porcentaje de residentes no europeos se asocia con una disminución del 0.314526 en PropiedadDifMun.
+
+- DifPrecioHipotecaProv. -0.104423. Un aumento en la diferencia del precio de la hipoteca provincial se asocia con una disminución del 0.104423 en 
+PropiedadDifMun.
+
+- ParoJuvenilDif. -0.119523. Un aumento en la tasa de paro juvenil se asocia con una disminución del 0.119523 en PropiedadDifMun.
+
+- ProtegidaDif. -0.132621. Un aumento en el porcentaje de viviendas protegidas se asocia con una disminución del 0.132621 en PropiedadDifMun.
+
+- PorcentajeTurísticas2021. 0.116006. Un mayor porcentaje de viviendas turísticas en 2021 se asocia con un aumento del 0.116006 en PropiedadDifMun.
+
+- PrecioAlquilerM2. -0.227560. Un aumento en el precio del alquiler por metro cuadrado se asocia con una disminución del 0.227560 en PropiedadDifMun.
+
+- Herencia11Mun. 0.168881. Un mayor porcentaje de viviendas heredadas se asocia con un aumento del 0.168881 en PropiedadDifMun.
+
+- PrecioAlquilerM22. 0.112387. La relación cuadrática del precio del alquiler muestra que, aunque los precios más altos inicialmente disminuyen la propiedad, después de cierto punto, aumentos adicionales en los precios pueden estar asociados con un aumento en la propiedad entre jóvenes.
+
+- RentaMedia2021_2. 0.022604. La relación cuadrática de la renta media sugiere que a medida que la renta media aumenta, también lo hace PropiedadDifMun.
+
+- DifPrecioHipotecaProv2. 0.071356. La relación cuadrática del precio de la hipoteca muestra que, después de cierto punto, aumentos adicionales en el precio de la hipoteca están asociados con un aumento en la propiedad entre jóvenes.
+
+- Herencia11Mun2. -0.058298. La relación cuadrática de las herencias muestra una disminución en la propiedad entre jóvenes después de un cierto umbral de viviendas heredadas.
+
+- PorcentajeEspañolaDif2. 0.147920. La relación cuadrática del porcentaje de población española sugiere que aumentos adicionales en este porcentaje están asociados con un aumento en la propiedad entre jóvenes.
+
+- PorcentajeEuropeaDif2. -0.029301. La relación cuadrática del porcentaje de población europea sugiere que aumentos adicionales en este porcentaje están asociados con una disminución en la propiedad entre jóvenes.
+
+```{r}
+
+municipios <- read_xlsx("municipios.xlsx")
+propiedad <- read_xlsx("propiedad.xlsx")
+
+# arregñar datos de reg tenen
+
+municipios <- municipios |> 
+    mutate(MUN_LITERAL = ifelse(grepl("\\d", MUN_LITERAL), paste(MUN_LITERAL, PROV_LITERAL), MUN_LITERAL))
+
+todopropiedad <- propiedad |> 
+  select(cusec, Propiedad21Mun, Alquiler21Mun, Otro21Mun, Propiedad11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun, PropiedadDifMun, AlquilerDifMun, OtroDifMun)
+
+municipios <- municipios |> 
+  select(-Propiedad21Mun, -Alquiler21Mun, -Otro21Mun, -Compra11Mun, -Herencia11Mun, -Alquiler11Mun, -Otro11Mun, -PropiedadDifMun, -AlquilerDifMun) |> 
+  left_join(todopropiedad, by = "cusec") 
+
+municipios <- municipios |> 
+  select(-OtroDifMun.x) |> 
+  mutate(OtroDifMun = OtroDifMun.y)
+
+municipios <- municipios |> 
+  mutate(SecundariasDif=PorcentajeSecundarias2021-PorcentajeSecundarias2011)
+
+numeric_data <- municipios %>%
+  ungroup() |> 
+  select_if(is.numeric) 
+
+# normalizar
+numeric_data <- scale(numeric_data)
+numeric_data <- as.data.frame(numeric_data)
+
+#seleccionar variables
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun) |> 
+
+  # Ejemplo de transformaciones:
+    mutate(PrecioAlquilerM22=PrecioAlquilerM2^2,
+         RentaMedia2021_2 = RentaMedia2021^2,
+         PorcentajeTurísleticas2021log = log(PorcentajeTurísticas2021 +1),
+         DifPrecioHipotecaProv2 = DifPrecioHipotecaProv^2,
+         Herencia11Mun2 = (Herencia11Mun)^2,
+           VaciasDif2 = VaciasDif^2,
+           RentaMedia2021_exp = exp(RentaMedia2021),
+         PorcentajeEspañolaDif2 = PorcentajeEspañolaDif^2,
+        PorcentajeEuropeaDif2 = PorcentajeEuropeaaDif^2,
+         PorcentajeNoEuropeaDif2 = PorcentajeNoEuropeaDif^2,
+    SecundariasDif2 = (SecundariasDif)^2)
+
+
+# Ajustar el modelo inicial con todas las variables (transformadas y originales)
+
+independientes <- independientes %>% 
+  select(-PorcentajeTurísleticas2021log)
+
+modelo_inicial <- lm(PropiedadDifMun ~ ., data = independientes)
+
+summary(modelo_inicial)
+
+# Usar stepAIC para seleccionar el mejor modelo
+modelo_final <- MASS::stepAIC(modelo_inicial, direction = "both")
+
+# Resumen del modelo final
+summary(modelo_final)
+
+
+bptest(modelo_final)
+
+residuos_estandarizados <- rstandard(modelo_final)  
+valores_ajustados <- fitted(modelo_final)         
+plot(valores_ajustados, residuos_estandarizados,
+     xlab = "Valores Ajustados", ylab = "Residuos Estandarizados",
+     main = "Gráfico de Residuos Estándar vs. Valores Ajustados")
+abline(h = 0, col = "red", lty = 2)  
+
+vif(modelo_final)
+
+```
+
+Ver mi modelo
+
+```{r}
+library(stargazer)
+stargazer(modelo_final, type = "text")
+
+stargazer(modelo_final, type = "html", out = "modelo_final.html")
+
+
+
+
+```
+
+### Dando consistencia
+
+Bloques de variables.
+- Población
+  - PorcentajeJoven 
+  - PorcentajeEspañola. Está elevada a 2.
+  - PorcentajeEuropea. X
+  - PorcentajeNoEuropea.
+  - ParoJuvenil. 
+  - RentaMedia. Me quedo elevado a 2.
+- Mercado de vivienda
+  - PorcentajeVacias 
+  - PorcentajeSecundarias 
+  - PorcentajeTurísticas 
+  - PorcentajeProtegidas 
+- Precio de vivienda
+  - ipv X
+  - PrecioHipoteca. Origial y elevada a 2. 
+  - PrecioAlquilerM2. Original y elevada a 2.
+- Régimen de tenencia.
+  - Herencia11Mun. Elevada a 2 y original.
+
+```{r}
+independientes <- numeric_data |> 
+  select(PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun) |> 
+
+  # Ejemplo de transformaciones:
+    mutate(PrecioAlquilerM22=PrecioAlquilerM2^2,
+         RentaMedia2021_2 = RentaMedia2021^2,
+         PorcentajeTurísleticas2021log = log(PorcentajeTurísticas2021 +1),
+         DifPrecioHipotecaProv2 = DifPrecioHipotecaProv^2,
+         Herencia11Mun2 = (Herencia11Mun)^2,
+           VaciasDif2 = VaciasDif^2,
+           RentaMedia2021_exp = exp(RentaMedia2021),
+         PorcentajeEspañolaDif2 = PorcentajeEspañolaDif^2,
+        PorcentajeEuropeaDif2 = PorcentajeEuropeaaDif^2,
+         PorcentajeNoEuropeaDif2 = PorcentajeNoEuropeaDif^2,
+    SecundariasDif2 = (SecundariasDif)^2)
+
+
+independientes <- independientes %>% 
+  select(-PrecioAlquilerM2, -Herencia11Mun, -RentaMedia2021_exp)
+
+#sin quitar repetidas
+independientes <- independientes %>% 
+  select(-RentaMedia2021_exp, -PorcentajeTurísleticas2021log)
+
+# Ajustar el modelo inicial con todas las variables (transformadasRentaMedia2021# Ajustar el modelo inicial con todas las variables (transformadas y originales)
+modelo_inicial <- lm(PropiedadDifMun ~ ., data = independientes)
+
+summary(modelo_inicial)
+
+# Usar stepAIC para seleccionar el mejor modelo
+modelo_final <- MASS::stepAIC(modelo_inicial, direction = "both")
+
+# Resumen del modelo final
+summary(modelo_final)
+
+
+bptest(modelo_final)
+
+residuos_estandarizados <- rstandard(modelo_final)  
+valores_ajustados <- fitted(modelo_final)         
+plot(valores_ajustados, residuos_estandarizados,
+     xlab = "Valores Ajustados", ylab = "Residuos Estandarizados",
+     main = "Gráfico de Residuos Estándar vs. Valores Ajustados")
+abline(h = 0, col = "red", lty = 2)  
+
+vif(modelo_final)
+```
+
 
 
 ### Gráficos chat
@@ -1721,7 +1956,17 @@ He de meter alquiler11mun? por queno? aclarar los regimenes de tenencia.
 
 Probar a ver estas relaciones antes de quedarme solo con las significativas
 
-cuando teng aun modelo alternativo compararlo con f test al modelo4 original.
+F-Test. Es mejor el modelo nuevo.
+```{r}
+# Comparar los dos modelos con un F-test
+anova_comparison <- anova(modelo4, modelo_final)
+print(anova_comparison)
+
+```
+
+
+
+
 
 ### Logit
 
@@ -1789,3 +2034,170 @@ Preparar clusters etc copiandome del trabajo de advanced modelling. También ten
 - ¿Tipos de perfil de individuo comprante?
 
 Hacer cluster con solo regimenes de enencia de munis? ver diferencias entre si pierde otro, si pierde alquiler... como he analizao un poco.
+
+
+# Pca con nuevo modelo
+
+Sorprendentemente? Quedándome solo con las variables del step model, en vez de todas las originales y transformadas, explico más variabilidad. Además, para interpretar es más fácil, y es más consistente utilizar las mismas que el modelo. Así que elijo usar sólo las que incluyo en mi modelo_final. Con menos componentes explico menos que mi PCA original, pero con 10 explico un poco más. 
+
+Quizá no tiene sentido meter las trasnformadas aquí, y sí tiene sentido meter los regímenes de tenencia.
+
+```{r}
+
+# Nomre de municipios
+names = municipios$MUN_LITERAL
+prov = municipios$PROV_LITERAL
+ccaa = municipios$CCAA
+
+# Selección de variables del Step Model
+selected_vars <- numeric_data %>% 
+  select(PropiedadDifMun, AlquilerDifMun, OtroDifMun, Herencia11Mun, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, PorcentajeTurísticas2021, PrecioAlquilerM2)
+
+# Creating the components
+# Tengo que poner scale aunque ya las haya normalizado porque sino me da algo raro
+set.seed(123)
+pca = prcomp(selected_vars, scale=T)
+summary(pca)
+
+# Plot of the variability explained by components
+fviz_screeplot(pca, addlabels = TRUE)
+
+
+
+```
+Analizar componente 1
+
+*Componente 1*. Las variables que más contribuyen a este componente es PrecioAlquilerM2, SecundariasDif, AlquilerDifMun, PropiedadDifMun, VaciasDif y Herencia11Mun. Son variables relacionadas con el precio de la vivienda de los municipios, también con el mercado de la vivienda. No tiene relación cosas como las características de la población juvenil.
+
+- PrecioAlquilerM2. Muy bajo el precio del alquiler.
+- SecundariasDif. Gran aumento de viviendas secundarias.
+- AlquilerDifMun. Gran descenso del alquiler.
+- PropiedadDifMun. Bastante aumento de la propiedad.
+- VaciasDif. Bastante aumento de viviendas vacías.
+- Herencia11Mun. Bastante herencia de viviendas principales en los municipios en 2011.
+
+Los municipios con más puntuación en este componente son municipios muy pequeños de Ourense y Lugo. Son municipios rurales con pocas con gran cantidad de viviendas secundarias o vacías, bajo precio de alquiler... También vemos que tienen más herencia que otros municipios, gran reducción del alquiler y aumento de la propiedad.
+
+Por otra parte, los municipios con menor puntuación son municipios con pocas viviendas secundarias, un alquiler caro, o además con muy poco aumento de viviendas vacías. También han experimentado un aumento del alquiler significativo.
+
+Algo así como ganancia de rpopiedad relacionada con caracteristicas de mmercado de la vivienda, secundarias.
+
+
+```{r}
+# Contribution of variables to component 1
+fviz_contrib(pca, choice = "var", axes = 1)
+
+# Plot adjustments
+n <- 10
+col_pos <- colorRampPalette(c("#CCE6CC", "#208909"))(n)
+col_neg <- colorRampPalette(c("#FFE6E6", "#B30000"))(n)
+coefs <- pca$rotation[,1]
+valor_max <- max(coefs)
+valor_min <- min(coefs)
+coefs_ajustados <- coefs - valor_min + 1
+colores <- ifelse(coefs >= 0, col_pos[ceiling((coefs_ajustados / (valor_max - valor_min + 1)) * n)], 
+                  col_neg[ceiling((abs(coefs_ajustados) / (valor_max - valor_min + 1)) * n)])
+
+# Plot
+barplot(coefs, las = 2, col = colores, cex.names = 0.8)
+
+#Ranking of municipalities of this component
+names[order(pca$x[,1], decreasing=T)][1:5]
+names[order(pca$x[,1])][1:5]
+
+```
+
+Analizar componente 2
+
+*Componente 2*. Las variables que más contribuyen a este componente es ParoJuvenilDif, ProtegidaDif, PorcentajeTurísticas2021, PrecioAlquilerM2, VaciasDif y PorcentajeNoEuropeaDif. Esta vez son variables más relacionadas con las características de la población, así como el mercado de vivienda.
+
+- ParoJuvenilDif. Ha aumentado muchísimo el paro juvenil. 
+- ProtegidaDif. Ha disminuido muchísimo la cantidad de viviendas protegidas.
+- PorcentajeTurísticas2021. Muchas viviendas turísticas.
+- PrecioAlquilerM2. Alquiler bastante caro.
+- VaciasDif. Bastante aumento de viviendas vacías.
+- PorcentajeNoEuropeaDif. Ha disminuido mucho la cantidad de personas no europeas.
+- PropiedadDifMun. Ha aumentado la propiedad.
+- AlquilerDifMun. Ha disminuido en igual manera el alquiler.
+
+Los municipios con más puntuación en este componente son Ceuta, La Oliva, Adeje... Son municipios con un aumento en propiedad menos pronunciado que en el componente 1 (o una reducción muy  limitada). Parece ser viviendas donde el mercado de la vivienda es menos favorable para la propiedad por menos viviendas protegidas, pero también hay más vacías. Un aumento de viviendas turísticas que puede relacionarse con el mayor precio del alquiler y parece que con menos población no europea.
+
+Por otra parte, los municipios con menor puntuación son Torre-Pacheco, Mazazrrón, Lorca. Estos municipios parecen estar en una situación más estable en términos de empleo juvenil y mercado inmobiliario. Menos presión turística y alquileres más asequibles sugieren un mercado menos competitivo y más accesible. La diversidad demográfica puede estar aumentando, lo que podría ser un reflejo de una mayor integración de inmigrantes no europeos. La tendencia hacia la propiedad de viviendas podría indicar una preferencia por la estabilidad y permanencia.
+
+Algo así como ganancia de rpopiedad relacionada con caracteristicas de paro, nacionalidad
+
+```{r}
+
+# Contribution of variables to component 1
+fviz_contrib(pca, choice = "var", axes = 2)
+
+# Plot adjustments
+n <- 10
+col_pos <- colorRampPalette(c("#CCE6CC", "#208909"))(n)
+col_neg <- colorRampPalette(c("#FFE6E6", "#B30000"))(n)
+coefs <- pca$rotation[,2]
+valor_max <- max(coefs)
+valor_min <- min(coefs)
+coefs_ajustados <- coefs - valor_min + 1
+colores <- ifelse(coefs >= 0, col_pos[ceiling((coefs_ajustados / (valor_max - valor_min + 1)) * n)], 
+                  col_neg[ceiling((abs(coefs_ajustados) / (valor_max - valor_min + 1)) * n)])
+
+# Plot
+barplot(coefs, las = 2, col = colores, cex.names = 0.8)
+
+#Ranking of municipalities of this component
+names[order(pca$x[,2], decreasing=T)][1:5]
+names[order(pca$x[,2])][1:5]
+
+```
+
+Plot de componentes 
+
+```{r}
+p <-data.frame(z1 = pca$x[,1], z2 = pca$x[,2]) %>%
+  ggplot(aes(z1, z2, label = names, color = ccaa)) +
+  geom_point(size = 0) +
+  labs(title = "First two principal components (scores)", x = "PC1", y = "PC2") +  theme_bw() +   theme(legend.position = "bottom") +
+  geom_text(size = 3, hjust = 0.6, vjust = 0, check_overlap = T)
+
+p
+
+# Versión interactiva
+ggplotly(p)
+```
+
+Cuantos clusters usar?
+
+Dos métodos sugieren 2, el tercero sugiere 5.
+```{r}
+fviz_nbclust(scale(selected_vars), kmeans, method = 'wss', k.max = 20, nstart = 1000)
+
+fviz_nbclust(scale(selected_vars), kmeans, method = 'silhouette', k.max = 20, nstart = 1000)
+
+fviz_nbclust(scale(selected_vars), kmeans, method = 'gap_stat', k.max = 10, nstart = 100, nboot = 100)
+
+```
+
+
+Que es cada cluster?
+
+```{r, fig.height=6, fig.width=12}
+
+
+fit <- kmeans(selected_vars, centers = 3, nstart = 100)
+fit
+
+selected_vars$cluster <- fit$cluster
+
+centers=fit$centers
+
+barplot(centers[1,], las=2, col="#097969")
+barplot(centers[2,], las=2, col="#097969")
+
+fviz_cluster(fit, data = selected_vars, geom = c("point"), ellipse.type = 'norm', pointsize = 1, show.clust.cent = FALSE) +
+  theme_minimal() + geom_text(label = names, hjust = 0, vjust = 0, size = 2, check_overlap = TRUE) +
+  scale_fill_brewer(palette = "Paired", guide = FALSE)
+
+
+```
+
