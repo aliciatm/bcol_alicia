@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-## Importar datos
+# Paquetes
 
 ```{r}
 library(tidyverse)
@@ -14,6 +14,20 @@ library(patchwork)
 library(readxl)
 library(haven)
 
+library(extrafont)
+
+# Importar fuentes del sistema operativo
+#font_import(prompt = FALSE)
+
+# Cargar fuentes
+loadfonts(device = "win")
+```
+
+# Jóvenes sin filtro
+
+## Importar datos
+
+```{r}
 
 load("Microdatos2021/Personas/R/CensoPersonas_2021.RData")
 
@@ -403,31 +417,29 @@ mapa_prop_prov21 <- ggplot(esp_can) +
 
 
 # Propiedad 2011
-provic <- esp_get_prov() |> 
-  mutate(CPRO = cpro)
-
-mapa <- jovenes_total |> 
-  select(CPRO, Propiedad11Prov)
+mapa <- propiedad |> 
+  select(CPRO, Compra11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
 
 mapa <- provic |> 
   left_join(mapa, by = "CPRO")
 
-mapa_prop_prov11 <- ggplot(esp_can) +
+# Compra
+p1 <- ggplot(esp_can) +
   geom_sf() +
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = mapa, aes(fill = Propiedad11Prov), color = "black", size = 1) + 
-        geom_sf_text(data = mapa, aes(label = round(Propiedad11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
-
+  geom_sf(data = mapa, aes(fill = Compra11Prov), color = "black", size = 1) + 
+        geom_sf_text(data = mapa, aes(label = round(Compra11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
   theme_void() +  
-  labs(title = "Probabilidad de propiedad por provincia 2011") +  
+  labs(title = "Porcentaje de compra por provincia 2011") +  
   theme(legend.position = c(0.18, 0.55),    
         legend.justification = "center",   
         legend.background = element_rect(fill = NULL, colour = "black"),
         legend.margin = margin(6, 6, 6, 6)) + 
   guides(fill = guide_legend(ncol = 2)) + 
   coord_sf() +
-  scale_fill_viridis_c(option = "C", direction = -1, limits = c(55, 85))
+  scale_fill_viridis_c(option = "C", direction = -1)
 
 # Alquiler
 
@@ -771,6 +783,8 @@ jovenes_total |>
 
 # -
 
+# Jóvenes con filtro y propiedad
+
 # Paquetes y ccaas
 
 ```{r}
@@ -782,6 +796,13 @@ library(patchwork)
 library(readxl)
 library(haven)
 
+library(extrafont)
+
+# Importar fuentes del sistema operativo
+#font_import(prompt = FALSE)
+
+# Cargar fuentes
+loadfonts(device = "win")
 
 # Añadir CCAA 
 ccaas <- data.frame(
@@ -793,9 +814,7 @@ ccaas <- data.frame(
 
 ```
 
-# Definiendo a los jóvenes que compran
-
-https://www.ine.es/prensa/ecepov_2021_feb.pdf
+# Definiendo compra
 
 ### En 2011
 
@@ -1170,7 +1189,7 @@ compra21 <- compra21 |>
 
 ### Por municipio
 
--   Propiedad 2021 con filtro (nuevo). Los municipios con más propiedad juvenil con las características que hemos definido (no vive con los padres, se mudó por última vez con mínimo 18 años...) son Martos con un 89% de propiedad frente a otros regímenes de tenencia, otros pueblos de Jaén o andaluces. Los que menos son catalanes, las islas.
+-   Propiedad 2011 con filtro (nuevo). Los municipios con más propiedad juvenil con las características que hemos definido (no vive con los padres, se mudó por última vez con mínimo 18 años...) son Martos con un 89% de propiedad frente a otros regímenes de tenencia, otros pueblos de Jaén o andaluces. Los que menos son catalanes, las islas.
 
 -   Compra 2011 con filtro (nuevo). Los municipios con más compra juvenil son municipios pequeños de Zamora o municipios valencianos y andaluces.
 
@@ -1191,19 +1210,19 @@ top_compra_2011 <- compra11 %>%
   select(Compra11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 # Herencia
-top_herencia_2011 <- compra11 %>%
+top_herencia_2011 <- propiedad %>%
   arrange(desc(Herencia11Mun)) %>%
   distinct(cusec, .keep_all = TRUE) |> 
   select(Herencia11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 # Alquiler
-top_alquiler_2011 <- compra11 %>%
+top_alquiler_2011 <- propiedad %>%
   arrange(desc(Alquiler11Mun)) %>%
   distinct(cusec, .keep_all = TRUE) |> 
   select(Alquiler11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 # Otro
-top_otro_2011 <- compra11 %>%
+top_otro_2011 <- propiedad %>%
   arrange(desc(Otro11Mun)) %>%
   distinct(cusec, .keep_all = TRUE) |> 
   select(Otro11Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
@@ -1215,10 +1234,15 @@ top_alquiler_2011
 top_otro_2011
 
 ```
-
 ### Por provincia
 
 ```{r}
+
+# Propiedad
+top_propiedad_2011 <- propiedad |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Propiedad11Prov)) |> 
+    select(Herencia11Prov, PROV_LITERAL, CCAA)
 
 # Compra
 top_compra_2011 <- compra11 |> 
@@ -1227,19 +1251,19 @@ top_compra_2011 <- compra11 |>
     select(Compra11Prov, PROV_LITERAL, CCAA)
 
 # Herencia
-top_herencia_2011 <- compra11 |> 
+top_herencia_2011 <- propiedad |> 
     distinct(CPRO, .keep_all = TRUE) |> 
     arrange(desc(Herencia11Prov)) |> 
     select(Herencia11Prov, PROV_LITERAL, CCAA)
 
 # Alquiler
-top_alquiler_2011 <- compra11 %>%
+top_alquiler_2011 <- propiedad %>%
   arrange(desc(Alquiler11Prov)) %>%
   distinct(CPRO, .keep_all = TRUE) |> 
   select(Alquiler11Prov, PROV_LITERAL, CCAA)
 
 # Otro
-top_otro_2011 <- compra11 %>%
+top_otro_2011 <- propiedad %>%
   arrange(desc(Otro11Prov)) %>%
   distinct(CPRO, .keep_all = TRUE) |> 
   select(Otro11Prov, PROV_LITERAL, CCAA)
@@ -1255,6 +1279,12 @@ top_otro_2011
 
 ```{r}
 
+# Propiedad
+top_propiedad_2011 <- propiedad |> 
+    distinct(CPRO, .keep_all = TRUE) |> 
+    arrange(desc(Propiedad11CCAA)) |> 
+    select(Herencia11Prov, PROV_LITERAL, CCAA)
+
 # Compra
 top_compra_2011 <- compra11 |> 
     distinct(CCAA, .keep_all = TRUE) |> 
@@ -1262,7 +1292,7 @@ top_compra_2011 <- compra11 |>
     select(Compra11CCAA, CCAA)
 
 # Herencia
-top_herencia_2011 <- compra11 |> 
+top_herencia_2011 <- propiedad |> 
     distinct(CCAA, .keep_all = TRUE) |> 
     arrange(desc(Herencia11CCAA)) |> 
     select(Herencia11CCAA, CCAA)
@@ -1293,19 +1323,19 @@ top_otro_2011
 ```{r}
 
 # Propiedad
-top_propiedad_2021 <- compra21 |> 
+top_propiedad_2021 <- propiedad |> 
     distinct(cusec, .keep_all = TRUE) |> 
     arrange(desc(Propiedad21Mun)) |> 
     select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 # Alquiler
-top_alquiler_2021 <- compra21 |> 
+top_alquiler_2021 <- propiedad |> 
     distinct(cusec, .keep_all = TRUE) |> 
     arrange(desc(Alquiler21Mun)) |> 
     select(Alquiler21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
 
 # Otro
-top_otro_2021 <- compra21 |> 
+top_otro_2021 <- propiedad |> 
     distinct(cusec, .keep_all = TRUE) |> 
     arrange(desc(Otro21Mun)) |> 
     select(Propiedad21Mun, MUN_LITERAL, PROV_LITERAL, CCAA)
@@ -1320,19 +1350,19 @@ top_otro_2021
 ```{r}
 
 # Propiedad
-top_propiedad_2021 <- compra21 |> 
+top_propiedad_2021 <- propiedad |> 
     distinct(CPRO, .keep_all = TRUE) |> 
     arrange(desc(Propiedad21Prov)) |> 
     select(Propiedad21Prov, PROV_LITERAL, CCAA)
 
 # Alquiler
-top_alquiler_2021 <- compra21 |> 
+top_alquiler_2021 <- propiedad |> 
     distinct(CPRO, .keep_all = TRUE) |> 
     arrange(desc(Alquiler21Prov)) |> 
     select(Alquiler21Prov, PROV_LITERAL, CCAA)
 
 # Otro
-top_otro_2021 <- compra21 |> 
+top_otro_2021 <- propiedad |> 
     distinct(CPRO, .keep_all = TRUE) |> 
     arrange(desc(Otro21Prov)) |> 
     select(Propiedad21Mun, PROV_LITERAL, CCAA)
@@ -1347,19 +1377,19 @@ top_otro_2021
 ```{r}
 
 # Propiedad
-top_propiedad_2021 <- compra21 |> 
+top_propiedad_2021 <- propiedad |> 
     distinct(CCAA, .keep_all = TRUE) |> 
     arrange(desc(Propiedad21CCAA)) |> 
     select(Propiedad21CCAA, CCAA)
 
 # Alquiler
-top_propiedad_2021 <- compra21 |> 
+top_propiedad_2021 <- propiedad |> 
     distinct(CCAA, .keep_all = TRUE) |> 
     arrange(desc(Alquiler21CCAA)) |> 
     select(Alquiler21CCAA, CCAA)
 
 # Otro
-top_propiedad_2021 <- compra21 |> 
+top_propiedad_2021 <- propiedad |> 
     distinct(CCAA, .keep_all = TRUE) |> 
     arrange(desc(Otro21CCAA)) |> 
     select(Otro21CCAA, CCAA)
@@ -1372,7 +1402,10 @@ top_propiedad_2021 <- compra21 |>
 
 ### Por provincia
 
-```{r, fig.height=6, fig.width=12}
+```{r, fig.height=8, fig.width=17}
+
+
+propiedad <- read_xlsx("propiedad.xlsx")
 
 library(mapSpain)
   
@@ -1384,33 +1417,38 @@ munic <- esp_get_munic()
 provic <- esp_get_prov() |> 
   mutate(CPRO = cpro)
 
-mapa <- compra11 |> 
-  select(CPRO, Compra11Prov) |> 
+
+# Propiedad
+mapa <- propiedad |> 
+  select(CPRO, Propiedad11Prov) |> 
   distinct(CPRO, .keep_all = TRUE)
 
 mapa <- provic |> 
   left_join(mapa, by = "CPRO")
 
-# Compra
+
 p1 <- ggplot(esp_can) +
-  geom_sf() +
+  geom_sf(color = "black", size = 0.7) +  
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = mapa, aes(fill = Compra11Prov), color = "black", size = 1) + 
-        geom_sf_text(data = mapa, aes(label = round(Compra11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  geom_sf(data = mapa, aes(fill = Propiedad11Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Propiedad11Prov, 1), color = ifelse(Propiedad11Prov > 75, "white", "black")), 
+               size = 2.4, check_overlap = TRUE, nudge_y = -0.03) + 
   theme_void() +  
-  labs(title = "Porcentaje de compra por provincia 2011") +  
-  theme(legend.position = c(0.18, 0.55),    
-        legend.justification = "center",   
-        legend.background = element_rect(fill = NULL, colour = "black"),
-        legend.margin = margin(6, 6, 6, 6)) + 
-  guides(fill = guide_legend(ncol = 2)) + 
+  labs(title = "% of Young People in 'Property' Residence Status in 2011") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")
+  ) + 
   coord_sf() +
-  scale_fill_viridis_c(option = "C", direction = -1)
+  scale_fill_viridis_c(option = "C", direction = -1) +
+  scale_color_identity()  
 
 # Herencia o donación
 
-mapa <- compra11 |> 
+mapa <- propiedad |> 
   select(CPRO, Herencia11Prov) |> 
   distinct(CPRO, .keep_all = TRUE)
 
@@ -1418,23 +1456,25 @@ mapa <- provic |>
   left_join(mapa, by = "CPRO")
 
 p2 <- ggplot(esp_can) +
-  geom_sf() +
+  geom_sf(color = "black", size = 0.7) +  
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = mapa, aes(fill = Herencia11Prov), color = "black", size = 1) + 
-        geom_sf_text(data = mapa, aes(label = round(Herencia11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  geom_sf(data = mapa, aes(fill = Herencia11Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Herencia11Prov, 1)), 
+               color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03) + 
   theme_void() +  
-  labs(title = "Porcentaje de herencia/donación por provincia 2011") +  
-  theme(legend.position = c(0.18, 0.55),    
-        legend.justification = "center",   
-        legend.background = element_rect(fill = NULL, colour = "black"),
-        legend.margin = margin(6, 6, 6, 6)) + 
-  guides(fill = guide_legend(ncol = 2)) + 
+  labs(title = "% of Young People in 'Inheritance/Donation' Residence Status in 2011") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")
+  ) + 
   coord_sf() +
   scale_fill_viridis_c(option = "C", direction = -1)
 
 # Alquiler
-mapa <- compra11 |> 
+mapa <- propiedad |> 
   select(CPRO, Alquiler11Prov) |> 
   distinct(CPRO, .keep_all = TRUE)
 
@@ -1442,23 +1482,25 @@ mapa <- provic |>
   left_join(mapa, by = "CPRO")
 
 p3 <- ggplot(esp_can) +
-  geom_sf() +
+  geom_sf(color = "black", size = 0.7) +  
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = mapa, aes(fill = Alquiler11Prov), color = "black", size = 1) + 
-        geom_sf_text(data = mapa, aes(label = round(Alquiler11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  geom_sf(data = mapa, aes(fill = Alquiler11Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Alquiler11Prov, 1)), 
+               color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03) + 
   theme_void() +  
-  labs(title = "Porcentaje de alquiler por provincia 2011") +  
-  theme(legend.position = c(0.18, 0.55),    
-        legend.justification = "center",   
-        legend.background = element_rect(fill = NULL, colour = "black"),
-        legend.margin = margin(6, 6, 6, 6)) + 
-  guides(fill = guide_legend(ncol = 2)) + 
+  labs(title = "% of Young People in 'Inheritance/Donation' Residence Status in 2011") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")
+  ) + 
   coord_sf() +
   scale_fill_viridis_c(option = "C", direction = -1)
 
 # Otro
-mapa <- compra11 |> 
+mapa <- propiedad |> 
   select(CPRO, Otro11Prov) |> 
   distinct(CPRO, .keep_all = TRUE)
 
@@ -1466,24 +1508,24 @@ mapa <- provic |>
   left_join(mapa, by = "CPRO")
 
 p4 <- ggplot(esp_can) +
-  geom_sf() +
+  geom_sf(color = "black", size = 0.7) +  
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = mapa, aes(fill = Otro11Prov), color = "black", size = 1) + 
-        geom_sf_text(data = mapa, aes(label = round(Otro11Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  geom_sf(data = mapa, aes(fill = Otro11Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Otro11Prov, 1)), 
+               color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03) + 
   theme_void() +  
-  labs(title = "Porcentaje de otro por provincia 2011") +  
-  theme(legend.position = c(0.18, 0.55),    
-        legend.justification = "center",   
-        legend.background = element_rect(fill = NULL, colour = "black"),
-        legend.margin = margin(6, 6, 6, 6)) + 
-  guides(fill = guide_legend(ncol = 2)) + 
+  labs(title = "% of Young People in 'Inheritance/Donation' Residence Status in 2011") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")
+  ) + 
   coord_sf() +
   scale_fill_viridis_c(option = "C", direction = -1)
 
-
 ggarrange(p1, p2, p3, p4, ncol=2, nrow = 2)
-
 
 ```
 
@@ -1491,8 +1533,7 @@ ggarrange(p1, p2, p3, p4, ncol=2, nrow = 2)
 
 ### Por provincia
 
-```{r, fig.height=6, fig.width=12}
-
+```{r, fig.height=8, fig.width=17}
 library(mapSpain)
 
 esp_can <- esp_get_country() 
@@ -1503,7 +1544,7 @@ munic <- esp_get_munic()
 provic <- esp_get_prov() |> 
   mutate(CPRO = cpro)
 
-mapa <- compra21 |> 
+mapa <- propiedad |> 
   select(CPRO, Propiedad21Prov) |> 
   distinct(CPRO, .keep_all = TRUE)
 
@@ -1511,25 +1552,26 @@ mapa <- provic |>
   left_join(mapa, by = "CPRO")
 
 # Propiedad
-p1 <- ggplot(esp_can) +
-  geom_sf() +
+  p1 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = mapa, aes(fill = Propiedad21Prov), color = "black", size = 1) + 
-        geom_sf_text(data = mapa, aes(label = round(Propiedad21Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  geom_sf(data = mapa, aes(fill = Propiedad21Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Propiedad21Prov, 1)), 
+               color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03) + 
   theme_void() +  
-  labs(title = "Porcentaje de propiedad por provincia 2021") +  
-  theme(legend.position = c(0.18, 0.55),    
-        legend.justification = "center",   
-        legend.background = element_rect(fill = NULL, colour = "black"),
-        legend.margin = margin(6, 6, 6, 6)) + 
-  guides(fill = guide_legend(ncol = 2)) + 
+  labs(title = "% of Young People in 'Property' Residence Status in 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")
+  ) + 
   coord_sf() +
   scale_fill_viridis_c(option = "C", direction = -1)
 
-
 # Alquiler
-mapa <- compra21 |> 
+mapa <- propiedad |> 
   select(CPRO, Alquiler21Prov) |> 
   distinct(CPRO, .keep_all = TRUE)
 
@@ -1537,23 +1579,23 @@ mapa <- provic |>
   left_join(mapa, by = "CPRO")
 
 p3 <- ggplot(esp_can) +
-  geom_sf() +
+  geom_sf(color = "black", size = 0.7) +  
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = mapa, aes(fill = Alquiler21Prov), color = "black", size = 1) + 
-        geom_sf_text(data = mapa, aes(label = round(Alquiler21Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  geom_sf(data = mapa, aes(fill = Alquiler21Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Alquiler21Prov, 1)), color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03, family = "Montserrat") + 
   theme_void() +  
-  labs(title = "Porcentaje de alquiler por provincia 2021") +  
-  theme(legend.position = c(0.18, 0.55),    
-        legend.justification = "center",   
-        legend.background = element_rect(fill = NULL, colour = "black"),
-        legend.margin = margin(6, 6, 6, 6)) + 
-  guides(fill = guide_legend(ncol = 2)) + 
+  labs(title = "% of Young People in 'Rent' Residence Status in 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")) + 
   coord_sf() +
   scale_fill_viridis_c(option = "C", direction = -1)
 
 # Otro
-mapa <- compra21 |> 
+mapa <- propiedad |> 
   select(CPRO, Otro21Prov) |> 
   distinct(CPRO, .keep_all = TRUE)
 
@@ -1561,18 +1603,18 @@ mapa <- provic |>
   left_join(mapa, by = "CPRO")
 
 p4 <- ggplot(esp_can) +
-  geom_sf() +
+  geom_sf(color = "black", size = 0.7) +  
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = mapa, aes(fill = Otro21Prov), color = "black", size = 1) + 
-        geom_sf_text(data = mapa, aes(label = round(Otro21Prov, 1)), color = "black", size = 2.5, check_overlap = TRUE, nudge_y = 0.1) +  # Agregar etiquetas
+  geom_sf(data = mapa, aes(fill = Otro21Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Otro21Prov, 1)), color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03, family = "Montserrat") + 
   theme_void() +  
-  labs(title = "Porcentaje de otro por provincia 2011") +  
-  theme(legend.position = c(0.18, 0.55),    
-        legend.justification = "center",   
-        legend.background = element_rect(fill = NULL, colour = "black"),
-        legend.margin = margin(6, 6, 6, 6)) + 
-  guides(fill = guide_legend(ncol = 2)) + 
+  labs(title = "% of Young People in 'Other' Residence Status in 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")) + 
   coord_sf() +
   scale_fill_viridis_c(option = "C", direction = -1)
 
@@ -2188,7 +2230,7 @@ Compra
 # Definir databases
 # 2011
 compra11 <- microdatos2011 |> 
-  select(CPRO, CMUN, EDAD, ANAC, NORDEN, ANORES, ANOM, LTRABA, MUNTRABA, TENEN, CON_NORDEN, OPA_NORDEN, TIPOPER, ESTHOG, EDADPAD, EDADMAD) 
+  select(CPRO, CMUN, EDAD, ANAC, NORDEN, ANORES, TENEN, OPA_NORDEN, TIPOPER, ESTHOG, EDADPAD, EDADMAD) 
 
 compra11 <- compra11 |> 
   filter(EDAD %in% c(18:35), # Jóvenes

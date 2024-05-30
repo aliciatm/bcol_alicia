@@ -2124,7 +2124,7 @@ Los municipios con más puntuación en este componente son Ceuta, La Oliva, Adej
 
 Por otra parte, los municipios con menor puntuación son Torre-Pacheco, Mazazrrón, Lorca. Estos municipios parecen estar en una situación más estable en términos de empleo juvenil y mercado inmobiliario. Menos presión turística y alquileres más asequibles sugieren un mercado menos competitivo y más accesible. La diversidad demográfica puede estar aumentando, lo que podría ser un reflejo de una mayor integración de inmigrantes no europeos. La tendencia hacia la propiedad de viviendas podría indicar una preferencia por la estabilidad y permanencia.
 
-Algo así como ganancia de rpopiedad relacionada con caracteristicas de paro, nacionalidad
+Algo así como ganancia de propiedad relacionada con caracteristicas de paro, nacionalidad
 
 ```{r}
 
