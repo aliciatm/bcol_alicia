@@ -1,0 +1,166 @@
+---
+title: "Mi Documento"
+author: "Tu Nombre"
+date: "2024-06-05"
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(lme4)
+library(stargazer)
+library(readxl)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+```
+
+
+# Multinivel
+
+```{r}
+
+municipios <- read_xlsx("municipios.xlsx")
+
+numeric_data <- municipios %>%
+  ungroup() |> 
+  select_if(is.numeric) 
+
+# normalizar
+numeric_data <- scale(numeric_data)
+numeric_data <- as.data.frame(numeric_data)
+
+#poner cpro y ccaa
+numeric_data <- numeric_data %>%
+  mutate(id = row_number())
+
+cpros <- municipios |> 
+  select(cusec, CPRO, CCAA) |> 
+  mutate(id = row_number())
+
+numeric_data <- numeric_data |> 
+  left_join(cpros, by = "id") |> 
+  select(-id)
+
+#seleccionar variables
+independientes <- numeric_data |> 
+  select(CCAA, CPRO, cusec, PropiedadDifMun, ipvGeneralDif, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeEspañolaDif, PorcentajeEuropeaDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, RentaMedia2021, PorcentajeTurísticas2021, PrecioAlquilerM2, Herencia11Mun) |> 
+
+  # Ejemplo de transformaciones:
+    mutate(PrecioAlquilerM22=PrecioAlquilerM2^2,
+         RentaMedia2021_2 = RentaMedia2021^2,
+         PorcentajeTurísleticas2021log = log(PorcentajeTurísticas2021 +1),
+         DifPrecioHipotecaProv2 = DifPrecioHipotecaProv^2,
+         Herencia11Mun2 = (Herencia11Mun)^2,
+           VaciasDif2 = VaciasDif^2,
+           RentaMedia2021_exp = exp(RentaMedia2021),
+         PorcentajeEspañolaDif2 = PorcentajeEspañolaDif^2,
+        PorcentajeEuropeaDif2 = PorcentajeEuropeaDif^2,
+         PorcentajeNoEuropeaDif2 = PorcentajeNoEuropeaDif^2,
+    SecundariasDif2 = (SecundariasDif)^2)
+
+independientes <- independientes %>% 
+  select(-PorcentajeTurísleticas2021log)
+
+
+variables <- independientes |> 
+  select(CCAA, CPRO, cusec, PropiedadDifMun, Herencia11Mun, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, PorcentajeTurísticas2021, PrecioAlquilerM2, RentaMedia2021_2, PrecioAlquilerM22, DifPrecioHipotecaProv2, Herencia11Mun2, PorcentajeEspañolaDif2, PorcentajeEuropeaDif2, RentaMedia2021)
+
+modelo_multi <- lmer(PropiedadDifMun ~ Herencia11Mun + PorcentajeJovenDif + VaciasDif + SecundariasDif + PorcentajeNoEuropeaDif + PorcentajeTurísticas2021 + PrecioAlquilerM2 + RentaMedia2021_2 + PrecioAlquilerM22 + Herencia11Mun2 + PorcentajeEspañolaDif2 + PorcentajeEuropeaDif2 + DifPrecioHipotecaProv + DifPrecioHipotecaProv2 + ParoJuvenilDif + ProtegidaDif + (1|CPRO) + (1|CCAA), data = variables)
+
+```
+
+El modelo
+
+```{r}
+modelo_multi <- lmer(PropiedadDifMun ~ PorcentajeJovenDif + PorcentajeEspañolaDif2 + PorcentajeEspañolaDif2 + PorcentajeEuropeaDif2 + PorcentajeNoEuropeaDif + RentaMedia2021 + VaciasDif + PorcentajeTurísticas2021 + PrecioAlquilerM2 +  + PrecioAlquilerM22 + Herencia11Mun +  Herencia11Mun2 + (1|CPRO) + (1|CCAA), data = variables)
+
+summary(modelo_multi)
+tab_model(modelo_multi, show.ci = F, show.se = T, pred.labels = c("(Intercept)", "Young Population Diff", "Spanish Population Diff ^2", "European Population Diff ^2", "Non-European Population Diff", "Average Income 2021", "Empty Dwellings Diff", "Tourist Dwellings 2021", "M2 Rental Price 2021", "M2 Rental Price 2021 ^2", "Inheritance 2011", "Inheritance 2011 ^2"))
+
+
+
+ranef(modelo_multi)
+
+
+```
+
+```{r}
+stargazer(modelo_multi, type = 'text')
+
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+tab_model(modelo_multi)
+```
+
+
+```{r mylatextable, results = "asis"}
+stargazer(modelo_multi, type = 'latex')
+
+```
+
+
+
+```{r}
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+tab_model(modelo_multi)
+```
+
+supposedly best model
+```{r}
+
+best_model2 <- lmer(PropiedadDifMun ~ Herencia11Mun + PorcentajeJovenDif + VaciasDif +  PorcentajeNoEuropeaDif + PrecioAlquilerM2 + PrecioAlquilerM22 + Herencia11Mun2 + PorcentajeEspañolaDif2 + (1|CPRO) + (1|CCAA), data = variables) 
+
+summary(best_model2)
+tab_model(best_model2)
+
+```
+
+
+# random forest
+
+```{r}
+library(caret)
+
+# Definir el conjunto de datos
+data <- data.frame(independientes)
+
+# Dividir el conjunto de datos en entrenamiento y prueba
+set.seed(123) # Para reproducibilidad
+trainIndex <- createDataPartition(data$PropiedadDifMun, p = .7, 
+                                  list = FALSE, 
+                                  times = 1)
+data_train <- data[trainIndex, ]
+data_test <- data[-trainIndex, ]
+
+# Construir el modelo de Random Forest
+model_rf <- train(PropiedadDifMun ~ ., 
+                  data = data_train, 
+                  method = "rf")
+
+# Resumen del modelo
+print(model_rf)
+
+# Realizar predicciones en el conjunto de prueba
+predictions <- predict(model_rf, data_test)
+
+# Evaluar el modelo
+accuracy <- sqrt(mean((data_test$PropiedadDifMun - predictions)^2))
+print(paste("Raíz del Error Cuadrático Medio (RMSE):", accuracy))
+
+```
+
