@@ -1234,6 +1234,7 @@ top_alquiler_2011
 top_otro_2011
 
 ```
+
 ### Por provincia
 
 ```{r}
@@ -2759,3 +2760,68 @@ prop.table(p) * 100
 ```
 
 Con lo cual, no voy a sacar resultados exactos de cuánto ha aumentado la compra en cada municipio por la interferencia de la herencia. Pero sí voy a poder ver tendencias y similiritudes entre los municipios donde ha aumentado la compra, aunque no sepa exactamente el porcentaje que ha aumentado. Considero que este es mi objetivo al fin y al cabo: discernir en qué tipo de municipio ha aumentado la compra, que es un perfil muy distinto al de municipios donde ha aumentado muchísimo el alquiler.
+
+JAén 2000
+
+```{r}
+propiedad |> 
+  filter(cusec == 23991) %>%
+  select(PropiedadDifMun, AlquilerDifMun, OtroDifMun) %>%
+  table()
+
+compra21 %>%
+  filter(cusec == 29075) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+
+prop.table(p) * 100
+
+```
+
+```{r}
+propiedad11 %>%
+  filter(cusec == 29075) %>%
+  select(TENEN_VIV) %>%
+  table()
+
+compra21 %>%
+  filter(cusec == 35992) %>%
+  select(TENEN_VIV) %>% 
+  table()
+
+
+cusec_count <- compra21 %>%
+  group_by(cusec) %>%
+  summarise(frequency = n())
+
+# Unir las columnas MUN_LITERAL y PROV_LITERAL sin agrupar por ellas
+cusec_count_full <- compra21 %>%
+  select(cusec, MUN_LITERAL, PROV_LITERAL) %>%
+  distinct() %>%
+  inner_join(cusec_count, by = "cusec")
+
+prop.table(p) * 100
+```
+
+##ver lo de herencia y otro
+
+```{r}
+
+
+
+p<-propiedad11 %>%
+  filter(cusec == "23991") %>%
+  select(TENEN_VIV) |>
+  table()
+
+prop.table(p) * 100
+
+p <- compra21 %>%
+  filter(cusec == "23991") %>%
+  select(TENEN_VIV) %>%
+  table()
+
+prop.table(p) * 100
+
+```

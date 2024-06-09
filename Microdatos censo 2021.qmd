@@ -71,7 +71,8 @@ metadatos_limpio <- metadatos2021 |>
 microdatos2021_rec <- microdatos2021_limpio |> 
    mutate(
      HABITAT = case_when(
-       CMUN %in% c(991, 992, 993) ~ "Rural",
+       CMUN %in% c(991, 992, 993) ~ "Rural"
+       CMUN %in% c(666, 999) ~ NA,
        TRUE ~ "Urbano"))|> 
    mutate(
       ECIVIL = case_when(
@@ -90,7 +91,14 @@ microdatos2021_rec <- microdatos2021_limpio |>
       ESTUDIOS = case_when(
         ESREAL_CNEDA %in% c(01,02,03) ~ "Sin estudios",
         ESREAL_CNEDA %in% c(04, 05, 06, 07) ~ "Estudios secundarios",
-        ESREAL_CNEDA %in% c(08, 09, 10, 11, 12) ~ "Estudios superiores"))
+        ESREAL_CNEDA %in% c(08, 09, 10, 11, 12) ~ "Estudios superiores")) |> 
+  mutate(
+    TENEN_VIV = case_when(
+      TENEN_VIV == 2 ~ "Propiedad",
+      TENEN_VIV == 3 ~ "Alquiler",
+      TENEN_VIV == 4 ~ "Otro"
+    )
+  )
 
 #VIVIENDAS
 
@@ -778,3 +786,13 @@ modelo <- lm(PRINCIPAL == "Vacía" ~ HABITAT + CCAA, data = viviendas11)
 summary(modelo)
 
 ```
+
+## Nacionalidad y viviendas secundarias
+
+No es posible saber la nacionalidad de las personas propietarias de las viviendas secundarias porque en el censo sólo aparecen las personas en viviendas principales. Hubiera sido útil para distinguir perfiles entre propietarios de viviendas secundarias en la costa y en otras CCAA, porque por lo leído en la bibliografía parece que éstos propietarios tienden a ser turistas europeos.
+
+```{r}
+table(microdatos2021_rec$NACIONALIDAD, microdatos2021_rec$TENEN_VIV)
+```
+
+## 

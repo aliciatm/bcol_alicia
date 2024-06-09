@@ -1539,8 +1539,8 @@ ggplotly(scatterplot, tooltip = "text")
 
 ```{r}
 
-analisis <- propiedad |> 
-  select(MUN_LITERAL, PROV_LITERAL, PropiedadDifMun, AlquilerDifMun, OtroDifMun) 
+analisis <- municipios |> 
+  select(MUN_LITERAL, PROV_LITERAL, PropiedadDifMun, AlquilerDifMun, OtroDifMun, PorcentajeTurísticas2021, ParoJuvenilDif, VaciasDif, PrecioAlquilerM2, RentaMedia2021) 
 
 
 componente1 <- municipios |> 

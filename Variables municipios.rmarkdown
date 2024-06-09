@@ -704,278 +704,151 @@ Cambiar tipo ipv
 
 ```{r}
 
-
-
 # Definir databases
-
 # 2011
 
 compra11 <- microdatos2011 |> 
   select(CPRO, CMUN, EDAD, ANAC, NORDEN, ANORES, ANOM, LTRABA, MUNTRABA, TENEN, CON_NORDEN, OPA_NORDEN, TIPOPER, ESTHOG, EDADPAD, EDADMAD) 
 
 compra11 <- compra11 |> 
-
   filter(EDAD %in% c(18:35), # Jóvenes
-
          TIPOPER != "H", # Que no son hijos en el núcleo
-
          is.na(EDADPAD), # Que no conviven con el padre
-
          is.na(EDADMAD)) |> # Que no conviven con la madre 
-
     select(-EDADPAD, -EDADMAD) |> 
-
   filter(ESTHOG %in% c(01, 02, 05, 07, 08, 10, 11)) # No es un hogar con una persona sola de +65 años ni hijos de más de 25
-
 
 compra11 <- compra11 |> 
   mutate(mayor = ifelse(ANORES - ANAC > 18, TRUE, FALSE)) |> 
   filter(mayor == TRUE) # Que era mayor de edad en la última mudanza
 
 compra11 <- compra11 |> 
-
   filter(NORDEN %in% c(1, 2)) # Que es orden 1 o 2 en el núcleo
 
-
-
 #Recodificar tenen viv
-
 compra11 <- compra11 |>  
-
   mutate(
-
     TENEN_r = case_when(
-
       TENEN == 1 ~ "Propiedad por compra, pagada",
-
       TENEN == 2 ~ "Propiedad por compra, pagos pendientes",
-
       TENEN == 3 ~ "Propiedad por herencia o donación",
-
       TENEN == 4 ~ "Alquiler",
-
       TENEN == 5 ~ "Cedida o a bajo precio",
-
       TENEN == 6 ~ "Otro")) |> 
-
   mutate(
-
     TENEN_VIV = case_when(
-
       TENEN_r %in% c("Propiedad por compra, pagada", "Propiedad por compra, pagos pendientes") ~ "Compra",
-
       TENEN_r == "Propiedad por herencia o donación" ~ "Herencia o donación",
-
       TENEN_r == "Alquiler" ~ "Alquiler",
-
       TENEN_r %in% c("Cedida o a bajo precio", "Otro") ~ "Otro"))
 
 # Poner cusec
-
 compra11 <- compra11 |>  
   mutate(
     CMUN = str_pad(CMUN, width = 3, side = "left", pad = "0"),
     CPRO = str_pad(CPRO, width = 2, side = "left", pad = "0")) |> 
-
    mutate(  
-
     CPRO = trimws(CPRO),
-
     CMUN = trimws(CMUN),
-
     cusec = paste0(CPRO, CMUN))
 
-
-
-
-
 # 2021
-
 compra21 <- microdatos2021 |> 
-
   select(CPRO, CMUN, VAREDAD, ANAC, TENEN_VIV, NORDEN, RESI_NACIM, VARANORES, VARANOM, CMUN_ANT, CMUN_UNANO, RESI_UNANO, CMUN_DANO, RESI_DANO, LTRAB, CMUN_TRAB, LEST, CMUN_EST, NORDEN_CON, NORDEN_OPA, TIPOPER, SEXO_MAD, SEXO_PAD, ESTRUC_HOG) 
 
-
-
 compra21 <- compra21 |> 
-
   filter(VAREDAD %in% c(18:35), # Jóvenes
-
          TIPOPER != "H", # Que no son hijos en el núcleo
-
          SEXO_PAD == "N", # Que no conviven con el padre
-
          SEXO_MAD == "N") |>  # Que no conviven con la madre
-
   mutate(ESTRUC_HOG = as.numeric(ESTRUC_HOG)) |> 
-
   filter(ESTRUC_HOG %in% c(01, 02, 05, 07, 08, 10, 11)) # No es un hogar con una persona sola de +65 años ni hijos de más de 25
-
-
 
 # Filtrar para haberse mudado a otra vivienda con mínimo 18 años, en una forma amplia
 
-
-
 compra21 <- compra21 |> 
-
   mutate(
-
     VARANORES_r = case_when(
-
       VARANORES == "0005" ~ as.numeric(2015),
-
       VARANORES == "0004" ~ as.numeric(2010),
-
       VARANORES %in% c("9999", "0003") ~ as.numeric(2000), 
-
       VARANORES == " " ~ NA,
-
       TRUE ~ as.numeric(VARANORES)),
-
       ANAC = as.numeric(ANAC),
-
       mayor = ifelse(VARANORES_r - ANAC > 18, TRUE, FALSE)) |> 
-
   filter(mayor == TRUE)
 
-
-
 compra21 <- compra21 |> 
-
   filter(NORDEN %in% c("01", "02")) # Que es orden 1 o 2 en el núcleo
-
-
 
 # Recodificar código de tenencia
 
 compra21 <- compra21 |> 
-
     mutate(
-
     TENEN_VIV = case_when(
-
       TENEN_VIV == 2 ~ "Propiedad",
-
       TENEN_VIV == 3 ~ "Alquiler",
-
       TENEN_VIV == 4 ~ "Otro")) 
 
-
-
 # Poner cusec
-
 compra21 <- compra21 |> 
-
   mutate(CPRO = trimws(CPRO), CMUN = trimws(CMUN), cusec = paste0(CPRO, CMUN))
-
-
 
 # Crear variables por año -----------------------------------
 
 # 2011
-
 # Por municipio
 
 compra11 <- compra11 |> 
-
   group_by(cusec) |> 
-
   mutate(
-
     Compra11Mun = round((sum(TENEN_VIV == "Compra") / n()) * 100, 2),
-
     Herencia11Mun = round((sum(TENEN_VIV == "Herencia o donación") / n()) * 100, 2),
-
     Alquiler11Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
-
-    Otro11Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |> 
-
-  ungroup()
-
-
+    Otro11Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>   ungroup()
 
 # 2021
-
 # Por municipio
-
 compra21 <- compra21 |> 
-
   group_by(cusec) |> 
-
   mutate(
-
     Propiedad21Mun = round((sum(TENEN_VIV == "Propiedad") / n()) * 100, 2),
-
     Alquiler21Mun = round((sum(TENEN_VIV == "Alquiler") / n()) * 100, 2),
-
-    Otro21Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |> 
-
-  ungroup()
-
-
+    Otro21Mun = round((sum(TENEN_VIV == "Otro") / n()) * 100, 2)) |>   ungroup()
 
 # Crear diferencia -------------------------
 
 tenencia11 <- compra11 |> 
-
   select(cusec, Compra11Mun, Herencia11Mun, Alquiler11Mun, Otro11Mun) |> 
-
     distinct(cusec, .keep_all = T)
 
-
-
 tenencia21 <- compra21 |> 
-
   select(cusec, Propiedad21Mun, Alquiler21Mun, Otro21Mun) |> 
-
   distinct(cusec, .keep_all = T)
 
-
-
 tenencias <- tenencia11 |> 
-
   left_join(tenencia21, by = "cusec")
 
-
-
 # Propiedad
-
 tenencias <- tenencias |> 
-
   mutate(
-
     PropiedadDifMun = Propiedad21Mun - Compra11Mun)
-
-
 
 # Alquiler
 
 tenencias <- tenencias |> 
-
   mutate(
-
     AlquilerDifMun = Alquiler21Mun - Alquiler11Mun)
-
-
 
 # Otro
 
 tenencias <- tenencias |> 
-
   mutate(
-
     OtroDifProv = Otro21Mun - Otro11Mun)
 
-
-
 municipios <- municipios |> 
-
   left_join(tenencias, by = "cusec") |> 
-
   distinct(cusec, .keep_all=T)
-
-
 
 ```
 
