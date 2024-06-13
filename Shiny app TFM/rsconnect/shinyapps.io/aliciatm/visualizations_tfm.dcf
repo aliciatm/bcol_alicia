@@ -1,0 +1,12 @@
+name: visualizations_tfm
+title:
+username: aliciatm
+account: aliciatm
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12178111
+bundleId: 8738739
+url: https://aliciatm.shinyapps.io/visualizations_tfm/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

@@ -1,0 +1,598 @@
+---
+title: "Visualization"
+output: html_document
+date: "2024-06-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Get shinyapps ready
+```{r}
+#install.packages('rsconnect')
+
+rsconnect::setAccountInfo(name='aliciatm', token='5ECCE0D38199B24760192D1B2B1BC14C', secret='eamy21I8NoNPPL+TF9V6W3/noKDtur8JzxWdsOHy')
+
+library(rsconnect)
+    rsconnect::deployApp('Visualizations.Rmd')
+
+```
+
+
+# Packages & data
+```{r}
+library(ggplot2)
+library(mapSpain)
+library(tidyverse)
+library(readxl)
+library(shiny)
+library(plotly)
+library(factoextra)
+
+municipios <- read_xlsx("municipios.xlsx")
+propiedad <- read_xlsx("propiedad.xlsx")
+
+# Make sure fonts are loaded
+library(extrafont)
+loadfonts(device = "win")
+
+```
+
+# Define plots
+### 2011 provinces
+
+```{r}
+
+  
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+# Propiedad
+mapa <- propiedad |> 
+  select(CPRO, Propiedad11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p1 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Propiedad11Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Propiedad11Prov, 1), color = ifelse(Propiedad11Prov > 75, "white", "black")), 
+               size = 3, family = "Montserrat", check_overlap = TRUE, nudge_y = -0.03) + 
+  theme_void() +  
+  labs(title = "% of Young People in 'Property' Residence Status in 2011") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri"),
+        plot.background = element_rect(fill = "white", color = NA),  # Fondo blanco para la figura
+    panel.background = element_rect(fill = "white", color = NA)  # Fondo blanco para el panel
+  ) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1) +
+  scale_color_identity()  
+
+# Herencia o donación
+
+mapa <- propiedad |> 
+  select(CPRO, Herencia11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p2 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Herencia11Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Herencia11Prov, 1)), 
+               color = "black", size = 3, family = "Montserrat", check_overlap = TRUE, nudge_y = -0.03) + 
+  theme_void() +  
+  labs(title = "% of Young People in 'Inheritance/Donation' Residence Status in 2011") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri"),
+        plot.background = element_rect(fill = "white", color = NA),  # Fondo blanco para la figura
+    panel.background = element_rect(fill = "white", color = NA)  # Fondo blanco para el panel
+  ) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+# Alquiler
+mapa <- propiedad |> 
+  select(CPRO, Alquiler11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p3 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Alquiler11Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Alquiler11Prov, 1)), 
+               color = "black", size = 3, family = "Montserrat", check_overlap = TRUE, nudge_y = -0.03) + 
+  theme_void() +  
+  labs(title = "% of Young People in 'Rent' Residence Status in 2011") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri"),
+    plot.background = element_rect(fill = "white", color = NA),  # Fondo blanco para la figura
+    panel.background = element_rect(fill = "white", color = NA)  # Fondo blanco para el panel
+) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+# Otro
+mapa <- propiedad |> 
+  select(CPRO, Otro11Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p4 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Otro11Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Otro11Prov, 1)), 
+               color = "black", size = 3, family = "Montserrat", check_overlap = TRUE, nudge_y = -0.03) + 
+  theme_void() +  
+  labs(title = "% of Young People in 'Rent' Residence Status in 2011") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri"),
+    plot.background = element_rect(fill = "white", color = NA),  # Fondo blanco para la figura
+    panel.background = element_rect(fill = "white", color = NA)  # Fondo blanco para el panel
+) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1)
+
+
+```
+
+### 2021 provinces
+
+```{r}
+
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- propiedad |> 
+  select(CPRO, Propiedad21Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+# Propiedad
+p5 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Propiedad21Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Propiedad21Prov, 1), color = ifelse(Propiedad21Prov > 75, "white", "black")), 
+               size = 3, check_overlap = TRUE, nudge_y = -0.03, family = "Montserrat") + 
+  theme_void() +  
+  labs(title = "% of Young People in 'Property' Residence Status in 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri"),
+    plot.background = element_rect(fill = "white", color = NA),  # Fondo blanco para la figura
+    panel.background = element_rect(fill = "white", color = NA)  # Fondo blanco para el panel
+  ) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1) +
+  scale_color_identity()  
+ 
+
+# Alquiler
+mapa <- propiedad |> 
+  select(CPRO, Alquiler21Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p6 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Alquiler21Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Alquiler21Prov, 1), 
+                                color = ifelse(Alquiler21Prov > 38, "white", "black")), 
+               size = 3, check_overlap = TRUE, nudge_y = -0.03, family = "Montserrat") + 
+  theme_void() +  
+  labs(title = "% of Young People in 'Rent' Residence Status in 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1) +
+  scale_color_identity()  # Añadimos esta escala para manejar los colores definidos manualmente
+
+# Otro
+mapa <- propiedad |> 
+  select(CPRO, Otro21Prov) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p7 <-ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = Otro21Prov), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(Otro21Prov, 1), color = ifelse(Otro21Prov > 19, "white", "black")), size =3, check_overlap = TRUE, nudge_y = -0.03, family = "Montserrat") + 
+  theme_void() +  
+  labs(title = "% of Young People in 'Other' Residence Status in 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")) + 
+  coord_sf() +
+  scale_fill_viridis_c(option = "C", direction = -1) +
+  scale_color_identity()  # Añadimos esta escala para manejar los colores definidos manualmente
+
+```
+
+### Diferencia
+
+```{r}
+
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+
+provic <- esp_get_prov() |> 
+  mutate(CPRO = cpro)
+
+mapa <- propiedad |> 
+  select(CPRO, PropiedadDifProv) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+# Propiedad
+  p8 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = PropiedadDifProv), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(PropiedadDifProv, 1)), 
+               color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03) + 
+  theme_void() +  
+  labs(title = "Difference of % of Young People in 'Ownership' Residence Status in 2011 to 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")
+  ) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0)
+
+# Alquiler
+mapa <- propiedad |> 
+  select(CPRO, AlquilerDifProv) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p9<- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = AlquilerDifProv), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(AlquilerDifProv, 1)), color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03, family = "Montserrat") + 
+  theme_void() +  
+  labs(title = "Difference of % of Young People in 'Rent' Residence Status in 2011 to 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0)
+
+# Otro
+mapa <- propiedad |> 
+  select(CPRO, OtroDifProv) |> 
+  distinct(CPRO, .keep_all = TRUE)
+
+mapa <- provic |> 
+  left_join(mapa, by = "CPRO")
+
+p10 <- ggplot(esp_can) +
+  geom_sf(color = "black", size = 0.7) +  
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = mapa, aes(fill = OtroDifProv), color = "black", size = 0.3) +  
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "white") +  
+  geom_sf_text(data = mapa, aes(label = round(OtroDifProv, 1)), color = "black", size = 2.4, check_overlap = TRUE, nudge_y = -0.03, family = "Montserrat") + 
+  theme_void() +  
+  labs(title = "Difference of % of Young People in 'Other' Residence Status in 2011 to 2021") +  
+  theme(
+    legend.position = "none",
+    plot.title = element_text(family = "Calibri", size = 14),
+    text = element_text(family = "Calibri")) + 
+  coord_sf() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0)
+
+```
+
+
+### Scatterplot
+
+
+```{r}
+
+municipios <- read_xlsx("municipios.xlsx")
+
+# Create the scatterplot using 'cusec' for y-axis positioning
+scatterplot <- ggplot(municipios, aes(x = PropiedadDifMun, y = cusec, color = CCAA)) +
+  geom_point(aes(text = paste(MUN_LITERAL, "PropiedadDifMun:", PropiedadDifMun))) +
+  geom_text(aes(label = MUN_LITERAL), hjust = 1.5, vjust = 0.5, size = 2.5) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "Scatterplot Interactivo de Municipios",
+       x = "PropiedadDifMun",
+       y = "")
+
+# Convertirlo en un gráfico interactivo con ggplotly
+scatterplot_interactivo <- ggplotly(scatterplot, tooltip = "text") %>%
+  layout(
+    hoverlabel = list(
+      bgcolor = "white",
+      bordercolor = "black",
+      font = list(size = 12)
+    )
+  )
+
+# Mostrar el scatterplot interactivo
+print(scatterplot_interactivo)
+
+
+```
+
+### Cluster plot
+
+```{r}
+
+municipios <- read_xlsx("municipios.xlsx")
+
+municipios <- municipios |> 
+    mutate(MUN_LITERAL = ifelse(grepl("\\d", MUN_LITERAL), paste(MUN_LITERAL, PROV_LITERAL), MUN_LITERAL))
+
+# Nomre de municipios
+names = municipios$MUN_LITERAL
+prov = municipios$PROV_LITERAL
+ccaa = municipios$CCAA
+numeric_data <- municipios %>%
+  ungroup() |> 
+  select_if(is.numeric) 
+
+numeric_data <- scale(numeric_data)
+numeric_data <- as.data.frame(numeric_data)
+
+# Selección de variables del Step Model
+selected_vars <- numeric_data %>% 
+  select(PropiedadDifMun, AlquilerDifMun, OtroDifMun, Herencia11Mun, PorcentajeJovenDif, VaciasDif, SecundariasDif, PorcentajeNoEuropeaDif, DifPrecioHipotecaProv, ParoJuvenilDif, ProtegidaDif, PorcentajeTurísticas2021, PrecioAlquilerM2, RentaMedia2021)
+
+# Creating the components
+# Tengo que poner scale aunque ya las haya normalizado porque sino me da algo raro
+set.seed(123)
+pca = prcomp(selected_vars, scale=T)
+summary(pca)
+
+p <-data.frame(z1 = pca$x[,1], z2 = pca$x[,2]) %>%
+  ggplot(aes(z1, z2, label = names, color = ccaa)) +
+  geom_point(size = 0) +
+  labs(title = "First two principal components (scores)", x = "PC1", y = "PC2") +  theme_bw() +   theme(legend.position = "bottom") +
+  geom_text(size = 3, hjust = 0.6, vjust = 0, check_overlap = T)
+
+# Versión interactiva
+library(plotly)
+clusplot <- ggplotly(p)
+
+fit <- kmeans(selected_vars, centers = 5, nstart = 100)
+
+selected_vars$cluster <- fit$cluster
+
+centers=fit$centers
+
+p <-fviz_cluster(fit, data = selected_vars, geom = c("point"), ellipse.type = 'norm', pointsize = 1, show.clust.cent = FALSE) +
+  theme_minimal() + geom_text(label = names, hjust = 0, vjust = 0, size = 2, check_overlap = TRUE) +
+  scale_fill_brewer(palette = "Paired", guide = FALSE)
+p
+
+
+
+```
+
+# Shiny app
+
+```{r}
+library(shiny)
+library(ggplot2)
+library(plotly)
+library(mapSpain)
+
+# Define la UI
+ui <- fluidPage(
+  titlePanel("Plot visualizer"),
+  tabsetPanel(
+    tabPanel("Maps by Tenure Regime",
+             sidebarLayout(
+               sidebarPanel(
+                 selectInput("category", "Select the category", 
+                             choices = c("2011", "2021", "Difference over the years")),
+                 uiOutput("graph_selector")  # Opción dinámica para el tipo de gráfico
+               ),
+               mainPanel(
+                 plotOutput("plot", height = "500px")  # Tamaño original del gráfico
+               )
+             )
+    ),
+    tabPanel("Clusterplot",
+             sidebarLayout(
+               sidebarPanel(
+                 # Puedes agregar más opciones aquí si lo necesitas
+               ),
+               mainPanel(
+                 plotlyOutput("clusterplot", height = "600px")  # Ajusta el tamaño según necesites
+               )
+             )
+    ),
+    tabPanel("Scatterplot",
+             sidebarLayout(
+               sidebarPanel(
+                 textInput("search", "Search municipality:", "")
+               ),
+               mainPanel(
+                 plotlyOutput("scatterplot", height = "600px", width = "100%")  # Hacer el scatterplot más grande horizontalmente
+               )
+             )
+    )
+  )
+)
+
+# Define el servidor
+server <- function(input, output) {
+  
+  # Función para generar el gráfico según la categoría y tipo de gráfico seleccionado
+  output$plot <- renderPlot({
+    category <- input$category
+    graph <- input$graph
+    
+    # Coloca el código para generar el gráfico según la categoría y tipo de gráfico seleccionado
+    if (category == "2011") {
+      if (graph == "Property") {
+        p1  # Renderiza el gráfico de Propiedad para el año 2011 (ejemplo)
+      } else if (graph == "Inheritance") {
+        p2  # Renderiza el gráfico de Herencia para el año 2011 (ejemplo)
+      } else if (graph == "Rent") {
+        p3  # Renderiza el gráfico de Alquiler para el año 2011 (ejemplo)
+      } else if (graph == "Other") {
+        p4  # Renderiza el gráfico de Otro para el año 2011 (ejemplo)
+      }
+    } else if (category == "2021") {
+      if (graph == "Property") {
+        p5  # Renderiza el gráfico de Propiedad para el año 2021 (ejemplo)
+      } else if (graph == "Rent") {
+        p6  # Renderiza el gráfico de Alquiler para el año 2021 (ejemplo)
+      } else if (graph == "Other") {
+        p7  # Renderiza el gráfico de Otro para el año 2021 (ejemplo)
+      }
+    } else if (category == "Difference over the years") {
+      if (graph == "Property") {
+        p8  # Renderiza el gráfico de Diferencia en Propiedad entre los años (ejemplo)
+      } else if (graph == "Rent") {
+        p9  # Renderiza el gráfico de Diferencia en Alquiler entre los años (ejemplo)
+      } else if (graph == "Other") {
+        p10  # Renderiza el gráfico de Diferencia en Otro entre los años (ejemplo)
+      }
+    }
+  }, height = 500, width = 700)  # Tamaño original del gráfico
+  
+  # Renderizar el scatterplot adicional con búsqueda
+  output$scatterplot <- renderPlotly({
+    search_term <- input$search
+    
+    # Filtrar los datos según el término de búsqueda
+    filtered_data <- if (search_term != "") {
+      municipios[grepl(search_term, municipios$MUN_LITERAL, ignore.case = TRUE), ]
+    } else {
+      municipios
+    }
+    
+    # Crear el scatterplot utilizando 'cusec' para la posición del eje x
+    scatterplot <- ggplot(filtered_data, aes(x = cusec, y = PropiedadDifMun, color = CCAA)) +
+      geom_point(aes(text = paste(MUN_LITERAL, "PropiedadDifMun:", PropiedadDifMun))) +
+      geom_text(aes(label = MUN_LITERAL), hjust = 1.5, vjust = 0.5, size = 2.5) +
+      theme_minimal() +
+      theme(axis.text.x = element_blank(),
+            axis.text.y = element_text(angle = 90, hjust = 1),
+            axis.ticks.y = element_blank()) +
+      labs(title = "Interactive Scatterplot - Municipalities x Ownership change",
+           x = "PropiedadDifMun",
+           y = "")
+    
+    # Convertirlo en un gráfico interactivo con ggplotly
+    plotly::ggplotly(scatterplot, tooltip = c("MUN_LITERAL", "PropiedadDifMun")) %>%
+      layout(
+        hoverlabel = list(
+          bgcolor = "white",
+          bordercolor = "black",
+          font = list(size = 12)
+        ),
+        xaxis = list(title = "PropiedadDifMun"),
+        yaxis = list(title = "", tickvals = NULL)  # Ocultar los valores del eje y
+      )
+  })
+  
+# Renderizar el clusterplot
+output$clusterplot <- renderPlotly({
+  # Crear el gráfico ggplot dentro de renderPlotly
+  p <- fviz_cluster(fit, data = selected_vars, geom = c("point"), ellipse.type = 'norm', pointsize = 1, show.clust.cent = FALSE) +
+  theme_minimal() + geom_text(label = names, hjust = 0, vjust = 0, size = 2, check_overlap = TRUE) +
+  scale_fill_brewer(palette = "Paired", guide = FALSE)
+  
+  # Convertir el gráfico ggplot 'p' en un gráfico interactivo con ggplotly
+  ggplotly(p)
+})
+
+# Definir las opciones del selector de gráficos según la categoría seleccionada
+output$graph_selector <- renderUI({
+  category <- input$category
+  if (category == "2011") {
+    selectInput("graph", "Select tenure regime", choices = c("Property", "Inheritance", "Rent", "Other"))
+  } else if (category == "2021") {
+    selectInput("graph", "Select tenure regime", choices = c("Property", "Rent", "Other"))
+  } else if (category == "Difference over the years") {
+    selectInput("graph", "Select tenure regime", choices = c("Property", "Rent", "Other"))
+  }
+})
+}
+# Ejecuta la aplicación
+shinyApp(ui = ui, server = server)
+
+```
+
+
